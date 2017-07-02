@@ -213,4 +213,11 @@ describe('Post-contribution', function(done) {
     .catch((err) => { assert.equal(err, null, err) })
   })
 
+  it('Should get the last block number', function(done) {
+    let b = config.web3.eth.blockNumber;
+    assert.equal(b-start_block, 18, "Incorrect closing block number");
+    done();
+  })
+
+
 })

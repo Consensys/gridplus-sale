@@ -114,7 +114,8 @@ exports.FaucetAccounts = function(accounts, _amt) {
 function callFaucet(to, from, pkey, amt) {
   return new Promise((resolve, reject) => {
     let unsigned = formUnsigned(from, to, 0, amt*Math.pow(10, 18))
-    return sendTxPromise(unsigned, pkey)
+    Promise.delay(50)
+    .then(() => { return sendTxPromise(unsigned, pkey) })
     .then((hash) => { resolve(hash); })
     .catch((err) => { reject(err); })
   })

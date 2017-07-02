@@ -1,6 +1,12 @@
-/**
-Deploy the payment channels contract and test them out
-*/
+// Deploy GRID and token sale contracts
+//
+// We will run a series of token sale simulations.
+// Each simulation will have a start and end block. These numbers will be bespoke
+// and designed based on what is being testing. Note that these simulations
+// are intended to run on testrpc where each transaction is sealed into a separate
+// block. Thus, calibrating the start and end blocks is a function of how many
+// on-chain transactions will take place before and during each sale.
+//
 var Promise = require('bluebird').Promise;
 var jsonfile = Promise.promisifyAll(require('jsonfile'));
 var ethutil = require('ethereumjs-util');
@@ -116,23 +122,41 @@ contract('TokenSale', function(accounts) {
       data.token_sale_3 = instance.address;
     })
   });
-
+  let start1;
+  let start2;
+  let start3;
   it('Should setup the first token sale simulation.', function() {
     // There are several tx that happen after setting this
     let Rmax = 960;
-    let start = config.web3.eth.blockNumber + 9;
+    start1 = config.web3.eth.blockNumber + 11;
     let L = 5;
     let cap = 0.5 * Math.pow(10, 18)
-    token_sales[0].SetupSale(Rmax, cap, start, L)
+    token_sales[0].SetupSale(Rmax, cap, start1, L)
   })
+
+  it('Should send the token sale some GRID.', function() {
+    grid_contract.transfer(data.token_sale_3, grid_supply, { from: accounts[0] })
+    .then(() => {})
+
+  })
+
 
   it('Should setup the second token sale simulation.', function() {
     // There are several tx that happen after setting this
     let Rmax = 960;
-    let start = config.web3.eth.blockNumber + 33;
+    start2 = start1 + 25;
     let L = 8;
     let cap = 0.5 * Math.pow(10, 18)
-    token_sales[1].SetupSale(Rmax, cap, start, L)
+    token_sales[1].SetupSale(Rmax, cap, start2, L)
+  })
+
+  it('Should setup the third token sale simulation', function() {
+    let Rmax = 960;
+    // 18 transactions from the previous sale + 50 pre-sale participants + 200 total accounts
+    start3 = start2 + 18 + 100 + 200;
+    let L = 150;
+    let cap = 100000 * Math.pow(10, 18);
+    token_sales[2].SetupSale(Rmax, cap, start3, L);
   })
 
   it('Should switch admin for sale', function() {
