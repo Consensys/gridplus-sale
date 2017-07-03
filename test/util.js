@@ -7,17 +7,20 @@ var keystore = require('eth-lightwallet').keystore;
 let gasPrice = 2*Math.pow(10, 9)
 
 // Form an unsigned tx. Returns an object.
-function formUnsigned(from, to, data, _value, _gas) {
+function formUnsigned(from, to, data, _value, _gas, _add_nonce) {
   let nonce = config.web3.eth.getTransactionCount(from)
   let value = _value || 0
   let gas = _gas || 100000
+  let add_nonce = _add_nonce || 0;
+  nonce += add_nonce;
   let tx = {
     from: from,
     to: to,
     data: data,
     value: `0x${value.toString(16)}`,
     gas: `0x${gas.toString(16)}`,
-    gasPrice: `0x${gasPrice.toString(16)}`
+    gasPrice: `0x${gasPrice.toString(16)}`,
+    nonce: `0x${nonce.toString(16)}`
   };
   return tx;
 }
@@ -49,6 +52,14 @@ exports.ecsign = function(msg_hash, pkey) {
   return signed
 }
 
+function getTxReceipt(txhash) {
+  return new Promise((resolve, reject) => {
+    var receipt = config.web3.eth.getTransactionReceipt(txhash)
+    if (receipt == null) { setTimeout(() => { return getTxReceipt(txhash); })}
+    else { resolve(receipt); }
+  })
+}
+
 // Send a transaction (promisified)
 function sendTxPromise(txn, pkey) {
   return new Promise((resolve, reject) => {
@@ -57,7 +68,7 @@ function sendTxPromise(txn, pkey) {
     tx.sign(privateKey);
     var serializedTx = tx.serialize();
     var txHash = config.web3.eth.sendRawTransaction(serializedTx.toString('hex'));
-    resolve(txHash)
+    resolve(txHash);
   })
 }
 exports.sendTxPromise = sendTxPromise;
@@ -103,7 +114,7 @@ exports.FaucetAccounts = function(accounts, _amt) {
     let pkey = config.setup.pkey;
     let amt = _amt || 0.1;
     Promise.resolve(accounts)
-    .map((a) => { return callFaucet(a.address, from, pkey, amt)})
+    .each((a) => { return callFaucet(a.address, from, pkey, amt)})
     .then(() => { resolve(true); })
     .catch((err) => { reject(err); })
   })
@@ -116,7 +127,8 @@ function callFaucet(to, from, pkey, amt) {
     let unsigned = formUnsigned(from, to, 0, amt*Math.pow(10, 18))
     Promise.delay(50)
     .then(() => { return sendTxPromise(unsigned, pkey) })
-    .then((hash) => { resolve(hash); })
+    .then((hash) => { return getTxReceipt(hash) })
+    .then((receipt) => { resolve(receipt); })
     .catch((err) => { reject(err); })
   })
 }

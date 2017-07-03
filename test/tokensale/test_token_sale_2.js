@@ -219,20 +219,4 @@ describe('Post-contribution', function(done) {
     done();
   })
 
-
-})
-
-
-// Quick unit test of the GRID token
-// https://github.com/ethereum/EIPs/issues/661
-describe('Provable burn', function(done) {
-
-  it('Should provably burn 10% of the first users tokens', function(done) {
-    done();
-  })
-
-  it('Should provably burn 100% of the last users tokens', function(done) {
-    done();
-  })
-
 })
