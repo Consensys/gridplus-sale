@@ -132,8 +132,10 @@ contract('TokenSale', function(accounts) {
     let Rmax = 960;
     start1 = config.web3.eth.blockNumber + 10;
     let L = 5;
-    let cap = 0.5 * Math.pow(10, 18)
-    token_sales[0].SetupSale(Rmax, cap, start1, L)
+    let cap = 0.5 * Math.pow(10, 18);
+    let y_int_denom = 5;
+    let m_denom = 50000;
+    token_sales[0].SetupSale(Rmax, cap, start1, L, y_int_denom, m_denom)
   })
 
 
@@ -143,16 +145,24 @@ contract('TokenSale', function(accounts) {
     start2 = start1 + 25;
     let L = 8;
     let cap = 0.5 * Math.pow(10, 18)
-    token_sales[1].SetupSale(Rmax, cap, start2, L)
+    let y_int_denom = 5;
+    let m_denom = 50000;
+    token_sales[1].SetupSale(Rmax, cap, start2, L, y_int_denom, m_denom)
   })
 
   it('Should setup the third token sale simulation', function() {
+    // This will trigger on the 47th transaction
     let Rmax = 960;
     // 18 transactions from the previous sale + 50 pre-sale participants + 200 total accounts
     start3 = start2 + 18 + 100 + 200;
     let L = 150;
     let cap = 100000 * Math.pow(10, 18);
-    token_sales[2].SetupSale(Rmax, cap, start3, L);
+    // These will not be the parameters in the actual sale.
+    // This is a hack to test behavior of a sale that reaches Rmax without
+    // mining 40k blocks
+    let y_int_denom = 5;
+    let m_denom = 5;
+    token_sales[2].SetupSale(Rmax, cap, start3, L, y_int_denom, m_denom);
   })
 
   it('Should switch admin for sale #2', function() {

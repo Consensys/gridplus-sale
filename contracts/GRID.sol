@@ -64,12 +64,12 @@ contract GRID is ERC20Plus {
 
   function burn(address owner, bytes32[3] data, uint8 v, uint value) returns (bool) {
     // Keccak-256 hash of "burn"
-    bytes32 word = 0xf43e8cfd4725c1e28fa4a6e3e468b4fcf75367166b850ac5f04e33ec843e82c1;
+    bytes32 word = 0xf43e8cfd;
     address signer = ecrecover(data[0], v, data[1], data[2]);
     if (signer != owner) { return false; }
 
     // Make sure the hash provided is of the channel id and the amount sent
-    bytes32 proof = sha3(value, address(this), word);
+    bytes32 proof = sha3(word, address(this), value);
     // Ensure the proof matches, send the value, send the remainder, and delete the channel
     if (proof != data[0]) { return false; }
     // Burn tokens
@@ -78,7 +78,6 @@ contract GRID is ERC20Plus {
     Transfer(owner, 0, value);
     return true;
   }
-
 
   //============================================================================
   // SAFE MATH FUNCTIONS

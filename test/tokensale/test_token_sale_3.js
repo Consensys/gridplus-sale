@@ -137,7 +137,6 @@ describe('Pre-sale', function(done) {
     .catch((err) => { assert.equal(err, null, err); })
   })
 })
-/*
 
 describe('Contribution', function(done) {
 
@@ -147,9 +146,9 @@ describe('Contribution', function(done) {
     done();
   })
 
-  it('Should contribute 0.1 eth from 8 accounts', function(done) {
-    this.timeout(5000);
-    Promise.resolve(accounts.slice(2, 10))
+  it('Should contribute 0.1 eth from 150 accounts', function(done) {
+    this.timeout(120000);
+    Promise.resolve(accounts.slice(N_PRESALE, N_ACCT))
     .map((a) => {
       let unsigned = util.formUnsigned(a.address, sale, 0, amt)
       return util.sendTxPromise(unsigned, a.privateKey)
@@ -161,6 +160,7 @@ describe('Contribution', function(done) {
 })
 
 describe('Post-contribution', function(done) {
+
   it('Should make sure the sale is over', function(done) {
     let b = config.web3.eth.blockNumber;
     assert.isAtLeast(b, end_block, "It is not the end of the sale");
@@ -171,12 +171,12 @@ describe('Post-contribution', function(done) {
     let Rf_data = "0xed2176c2";
     util.call(sale, Rf_data)
     .then((Rf) => {
-      let expected_rf = Math.floor(Rmax/5) + Math.floor((NUM_TXN*Rmax)/50000);
+      let expected_rf = Math.min(Rmax, Math.floor(Rmax/5) + Math.floor((NUM_TXN*Rmax)/5));
       assert.equal(parseInt(Rf), expected_rf)
       done();
     })
   })
-
+/*
   it('Should claim GRID tokens', function(done) {
     this.timeout(5000)
     let rf;
@@ -230,6 +230,5 @@ describe('Post-contribution', function(done) {
   //   assert.equal(b-start_block, 18, "Incorrect closing block number");
   //   done();
   // })
-
-})
 */
+})

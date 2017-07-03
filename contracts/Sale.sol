@@ -13,8 +13,10 @@ contract Sale {
   uint public cap;                         // Cap on the total wei to raise
   uint public Rmax;                        // Maximum reward (qGRID/WEI), multiple of 5
   uint public Rf;                          // Final reward (qGRID/WEI)
-  uint public C;                           // Spot price ($/ETH)
   bool private hatch_open;                 // Escape hatch
+
+  uint public m_denom;                     // denominator of slope (should be 50,000)
+  uint public y_int_denom;                 // denominator of y-intercept (should be 5)
 
   //============================================================================
   // PUBLIC SALE
@@ -59,12 +61,12 @@ contract Sale {
     if (block.number < start || block.number > end) { throw; }
     else {
       //R = (Rmax/5)  + (Rmax * (Bi - B0))/50,000
-      uint y_int = safeDiv(Rmax, 5);
+      uint y_int = safeDiv(Rmax, y_int_denom);
 
       uint d_block = safeSub(block.number, start);
       // 0.0005 eth == 50000000000000 wei
       uint _m = safeMul(Rmax, d_block);
-      uint m = safeDiv(_m, 50000);
+      uint m = safeDiv(_m, m_denom);
       return safeAdd(y_int, m);
     }
   }
@@ -136,11 +138,18 @@ contract Sale {
   }
 
   // Parameterize the sale
-  function SetupSale(uint _Rmax, uint _cap, uint _start, uint length) onlyAdmin() {
-    cap = _cap;
-    Rmax = _Rmax;  // This needs to be a multiple of 5
-    start = _start;
-    end = length + _start;
+  function SetupSale(uint _Rmax, uint _cap, uint _start, uint length, uint _y_den, uint _m_den) onlyAdmin() {
+    // Can only do this once
+    if (start == 0) {
+      y_int_denom = _y_den;
+      m_denom = _m_den;
+      cap = _cap;
+      Rmax = _Rmax;  // This needs to be a multiple of 5
+      start = _start;
+      end = length + _start;
+    } else {
+      throw;
+    }
   }
 
   function MoveFunds(address to, uint amount) onlyAdmin() {
