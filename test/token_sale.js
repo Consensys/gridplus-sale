@@ -100,14 +100,6 @@ contract('TokenSale', function(accounts) {
     })
   });
 
-  it('Should check my GRID balance', function() {
-    grid_contract.balanceOf(accounts[0])
-    .then((balance) => {
-      assert.isAtLeast(balance.toNumber(), grid_supply)
-    })
-  })
-
-
   it('Should send the token sale some GRID.', function() {
     grid_contract.transfer(data.token_sale_2, grid_supply, { from: accounts[0] })
     .then(() => {})
@@ -122,22 +114,26 @@ contract('TokenSale', function(accounts) {
       data.token_sale_3 = instance.address;
     })
   });
+
+  it('Should send the token sale some GRID.', function() {
+    grid_contract.transfer(data.token_sale_3, grid_supply, { from: accounts[0] })
+    .then(() => {})
+
+  })
+
+  // SIMULATION SETUP
+
+
   let start1;
   let start2;
   let start3;
   it('Should setup the first token sale simulation.', function() {
     // There are several tx that happen after setting this
     let Rmax = 960;
-    start1 = config.web3.eth.blockNumber + 11;
+    start1 = config.web3.eth.blockNumber + 10;
     let L = 5;
     let cap = 0.5 * Math.pow(10, 18)
     token_sales[0].SetupSale(Rmax, cap, start1, L)
-  })
-
-  it('Should send the token sale some GRID.', function() {
-    grid_contract.transfer(data.token_sale_3, grid_supply, { from: accounts[0] })
-    .then(() => {})
-
   })
 
 
@@ -159,7 +155,7 @@ contract('TokenSale', function(accounts) {
     token_sales[2].SetupSale(Rmax, cap, start3, L);
   })
 
-  it('Should switch admin for sale', function() {
+  it('Should switch admin for sale #2', function() {
     token_sales[1].SwitchAdmin(config.setup.admin_addr)
     .then(() => {})
   })

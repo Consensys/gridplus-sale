@@ -108,7 +108,7 @@ describe('Pre-sale', function(done) {
     Promise.resolve(accounts.slice(0,2))
     .map((a) => {
       let data = `0xd5b07066${util.zfill(a.address)}`;
-      let unsigned = util.formUnsigned(config.addresses.admin, sale, data, 0);
+      let unsigned = util.formUnsigned(config.setup.admin_addr, sale, data, 0);
       return util.sendTxPromise(unsigned, config.setup.admin_pkey)
     })
     .then(() => { done(); })

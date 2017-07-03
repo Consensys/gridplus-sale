@@ -103,21 +103,32 @@ describe('Setup', function(done) {
     })
   })
 })
-/*
+
 describe('Pre-sale', function(done) {
-  it('Should whitelist accouts 1 and 2 to participate in the pre-sale', function(done) {
-    Promise.resolve(accounts.slice(0,2))
+
+  it('Should make sure the sale has not started yet', function(done) {
+    let b = config.web3.eth.blockNumber;
+    assert.isAtMost(b, start_block, "Start block has not been reached")
+    done();
+  })
+
+
+  it('Should whitelist accouts 1-50 to participate in the pre-sale', function(done) {
+    this.timeout(120000)
+    Promise.resolve(accounts.slice(0, N_PRESALE))
     .map((a) => {
       let data = `0xd5b07066${util.zfill(a.address)}`;
-      let unsigned = util.formUnsigned(config.addresses.admin, sale, data, 0);
-      return util.sendTxPromise(unsigned, config.setup.admin_pkey)
+      let unsigned = util.formUnsigned(config.setup.addr, sale, data, 0);
+      return util.sendTxPromise(unsigned, config.setup.pkey)
     })
+    .then(() => { return Promise.delay(1000); })
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
   })
 
   it('Should let the presalers contribute', function(done) {
-    Promise.resolve(accounts.slice(0, 2))
+    this.timeout(120000)
+    Promise.resolve(accounts.slice(0, N_PRESALE))
     .map((a) => {
       let unsigned = util.formUnsigned(a.address, sale, 0, amt)
       return util.sendTxPromise(unsigned, a.privateKey)
@@ -126,7 +137,7 @@ describe('Pre-sale', function(done) {
     .catch((err) => { assert.equal(err, null, err); })
   })
 })
-
+/*
 
 describe('Contribution', function(done) {
 
