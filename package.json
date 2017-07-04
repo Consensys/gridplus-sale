@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/ConsenSys/gridplus-sale#readme",
   "dependencies": {
+    "bignumber.js": "^4.0.2",
     "bluebird": "^3.5.0",
     "chai": "^4.0.2",
     "eth-lightwallet": "^2.5.6",

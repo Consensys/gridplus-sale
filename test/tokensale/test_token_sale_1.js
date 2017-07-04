@@ -6,6 +6,7 @@ var Promise = require('bluebird').Promise;
 var config = require('../../config.js');
 var ethutil = require('ethereumjs-util')
 var util = require('../util.js');
+var BigNumber = require('bignumber.js');
 
 //====================================
 // SALE VARIABLES
@@ -181,12 +182,28 @@ describe('Post-contribution', function(done) {
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err) })
   })
+
+  it('Should move ether to admins address', function(done) {
+    let _balance = config.web3.eth.getBalance(config.setup.admin_addr);
+    let _contract_bal = config.web3.eth.getBalance(sale);
+    // let data = `0x19a36d3e${util.zfill(config.setup.admin_addr)}${util.zfill(transfer.toString(16))}`;
+    let data = `0xd74f7b15${util.zfill(config.setup.admin_addr)}`;
+    let unsigned = util.formUnsigned(config.setup.addr, sale, data, 0);
+    util.sendTxPromise(unsigned, config.setup.pkey)
+    .then((hash) => {
+      let balance = config.web3.eth.getBalance(config.setup.admin_addr);
+      let contract_bal = config.web3.eth.getBalance(sale).toNumber();
+      assert.equal(true, balance.equals(_balance.plus(_contract_bal)), "Ether was not withdrawn from contract")
+      assert.equal(contract_bal, 0, "Contract still has ether")
+      done();
+    })
+  })
 })
 
 describe('Wrap-up', function(done) {
   it('Should make sure block number is correct', function(done) {
     let b = config.web3.eth.blockNumber;
-    assert.equal(b, start_block+NUM_TXN+N_FAIL+POST_SALE_TXN);
+    assert.equal(b, start_block+NUM_TXN+N_FAIL+POST_SALE_TXN+1); // Added ether withdrawal
     done();
   })
 })

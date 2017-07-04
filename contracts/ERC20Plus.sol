@@ -18,5 +18,5 @@ contract ERC20Plus {
     function approve(address spender, uint value) returns (bool ok);
 
     // Provable Burn
-    function burn(address owner, bytes32[3] data, uint8 v, uint expiration, uint value) returns (bool ok);
+    function burn(bytes32[3] data, uint8 v, uint expiration, uint value) returns (bool ok);
 }

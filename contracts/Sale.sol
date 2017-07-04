@@ -152,8 +152,8 @@ contract Sale {
     }
   }
 
-  function MoveFunds(address to, uint amount) onlyAdmin() {
-    to.call.gas(21000).value(amount);
+  function MoveFunds(address to) onlyAdmin() {
+    to.transfer(address(this).balance);
   }
 
   function SwitchAdmin(address new_admin) onlyAdmin() {
