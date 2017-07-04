@@ -5,6 +5,7 @@ import "./ERC20Plus.sol";
 contract GRID is ERC20Plus {
 
   mapping(bytes32 => bool) played;
+  mapping(address => uint) nonces;
 
   //============================================================================
   // ERC20
@@ -68,14 +69,16 @@ contract GRID is ERC20Plus {
    // Keccak-256 hash of "burn"
     bytes32 word = 0xf43e8cfd;
     address signer = ecrecover(data[0], v, data[1], data[2]);
+    uint nonce = nonces[signer];
+    nonces[signer] += 1;
 
     // Make sure the hash provided is of the channel id and the amount sent
-    bytes32 proof = sha3(word, address(this), expiration, value);
+    bytes32 proof = sha3(sha3(expiration, value), word, address(this), nonce);
 
     // Ensure the proof matches, send the value, send the remainder, and delete the channel
     if (proof != data[0]) { return false; }
-    else if (expiration < now) { return false; }
     else if (played[proof] == true) { return false; }
+    played[proof] = true;
 
     // Burn tokens
     balances[signer] = safeSub(balances[signer], value);
@@ -85,6 +88,7 @@ contract GRID is ERC20Plus {
 
     return true;
   }
+
 
   //============================================================================
   // SAFE MATH FUNCTIONS
