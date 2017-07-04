@@ -59,7 +59,7 @@ describe('Setup', function(done) {
   })
 
   it('Should send a faucet request from each account', function(done) {
-    this.timeout(5000);
+    this.timeout(9000);
     util.FaucetAccounts(accounts)
     .then((success) => { return Promise.delay(1000); })
     .then(() => { done(); })

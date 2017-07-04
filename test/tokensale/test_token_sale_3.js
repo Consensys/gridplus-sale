@@ -178,13 +178,13 @@ describe('Post-contribution', function(done) {
   })
 
   it('Should claim GRID tokens', function(done) {
-    this.timeout(5000)
+    this.timeout(120000)
     let rf;
     let Rf_data = "0xed2176c2";
     util.call(sale, Rf_data)
     .then((_rf) => {
       rf = parseInt(_rf);
-      return Promise.resolve(accounts.slice(0, 10))
+      return Promise.resolve(accounts)
     })
     .map((a,i) => {
       let reward;
@@ -201,13 +201,9 @@ describe('Post-contribution', function(done) {
       })
       .then((_reward) => {
         reward = parseInt(_reward);
-        /*if (i < 2) {
-          // Avoid any numerical errors by looking at multiples
-          assert.equal(reward*100, contribution*rf*115, "Got wrong reward")
-        } else {
-          assert.equal(reward, contribution*rf, "Got wrong reward")
-        }*/
-        // Claim that reward
+        // This one should have hit the ceiling, so the presalers should get
+        // no discount.
+        assert.equal(reward, contribution*rf, "Got wrong reward")
         let data = `0xf6761151${util.zfill(a.address)}`
         let unsigned = util.formUnsigned(a.address, sale, data, 0)
         return util.sendTxPromise(unsigned, a.privateKey)
