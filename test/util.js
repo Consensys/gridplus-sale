@@ -4,7 +4,8 @@ var Tx = require('ethereumjs-tx');
 var fs = require('fs');
 var ethutil = require('ethereumjs-util');
 var keystore = require('eth-lightwallet').keystore;
-let gasPrice = 2*Math.pow(10, 9)
+let gasPrice = 2*Math.pow(10, 9);
+var sha3 = require('solidity-sha3').default;
 
 // Form an unsigned tx. Returns an object.
 function formUnsigned(from, to, data, _value, _gas, _add_nonce) {
@@ -27,7 +28,7 @@ function formUnsigned(from, to, data, _value, _gas, _add_nonce) {
 exports.formUnsigned = formUnsigned;
 
 // Call a web3 contract. Returns a hex string.
-exports.call = function(to, data) {
+function call(to, data) {
   return new Promise((resolve, reject) => {
     config.web3.eth.call({to: to, data: data}, (err, result) => {
       if (err) { reject(err); }
@@ -35,6 +36,7 @@ exports.call = function(to, data) {
     })
   })
 }
+exports.call = call;
 
 // Sign a transaction
 exports.sign = function(txn, pkey) {
@@ -74,7 +76,8 @@ function sendTxPromise(txn, pkey) {
 exports.sendTxPromise = sendTxPromise;
 
 // Left pad and remove 0x prefix
-exports.zfill = function(num) { if (num.substr(0,2)=='0x') num = num.substr(2, num.length); var s = num+""; while (s.length < 64) s = "0" + s; return s; }
+function zfill(num) { if (num.substr(0,2)=='0x') num = num.substr(2, num.length); var s = num+""; while (s.length < 64) s = "0" + s; return s; }
+exports.zfill = zfill;
 
 // Create `num` accounts and return an array of objects.
 exports.createAccounts = function(num) {
@@ -131,4 +134,39 @@ function callFaucet(to, from, pkey, amt) {
     .then((receipt) => { resolve(receipt); })
     .catch((err) => { reject(err); })
   })
+}
+
+// Get the message to sign and send to provableBurn
+exports.getBurnMessage = function(value, contract, user) {
+  return new Promise((resolve, reject) => {
+    // First 4 bytes of "burn"
+    let word = "0xf43e8cfd";
+    // Get the nonce of this user
+    let data = `0x2d0335ab${zfill(user)}`
+    // Message
+    call(contract, data)
+    .then((nonce) => {
+      // I am combining all stringified arguments into one because I was having
+      // trouble with solidity-sha3
+      let arg_a = `${sha3(value)}${word.substr(2, word.length)}${contract.substr(2, contract.length)}`
+      let arg_b = parseInt(nonce);
+      let msg = sha3(arg_a, arg_b)
+      resolve(msg)
+    })
+    .catch((err) => { reject(err); })
+  })
+}
+
+// Sign a message and return it with the signature
+exports.signMessage = function(msg, pkey) {
+  let msg_hash = Buffer.from(zfill(msg), 'hex');
+  let p = Buffer.from(pkey, 'hex')
+  let sig = ethutil.ecsign(msg_hash, p);
+  let parsed_sig = {
+    v: sig.v.toString(16),
+    r: sig.r.toString('hex'),
+    s: sig.s.toString('hex'),
+    msg: msg
+  };
+  return parsed_sig;
 }

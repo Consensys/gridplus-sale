@@ -65,28 +65,42 @@ contract GRID is ERC20Plus {
   // ADDITIONAL FUNCTION
   //============================================================================
 
-  function burn(bytes32[3] data, uint8 v, uint expiration, uint value) returns (bool) {
-   // Keccak-256 hash of "burn"
-    bytes32 word = 0xf43e8cfd;
+  function burn(bytes32[3] data, uint8 v, uint value) returns (bool) {
+    // data[0]    Hash of tightly packed params
+    // data[1]    r of signature
+    // data[2]    s of signature
+    // Keccak-256 hash of "burn"
+    bytes4 word = 0xf43e8cfd;
     address signer = ecrecover(data[0], v, data[1], data[2]);
     uint nonce = nonces[signer];
-    nonces[signer] += 1;
 
     // Make sure the hash provided is of the channel id and the amount sent
-    bytes32 proof = sha3(sha3(expiration, value), word, address(this), nonce);
+    bytes32 proof = sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
 
     // Ensure the proof matches, send the value, send the remainder, and delete the channel
     if (proof != data[0]) { return false; }
-    else if (played[proof] == true) { return false; }
-    played[proof] = true;
+    if (played[proof] == true) { return false; }
 
     // Burn tokens
     balances[signer] = safeSub(balances[signer], value);
     supply = safeSub(supply, value);
     Transfer(signer, 0, value);
+
+    // Update state variables
     played[proof] = true;
+    nonces[signer] += 1;
 
     return true;
+  }
+
+  function getNonce(address user) constant returns (uint) {
+    return nonces[user];
+  }
+
+  function tmp(uint value, address user) constant returns(bytes32) {
+    bytes4 word = 0xf43e8cfd;
+    uint nonce = nonces[user];
+    return sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
   }
 
 

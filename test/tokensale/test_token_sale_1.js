@@ -200,10 +200,79 @@ describe('Post-contribution', function(done) {
   })
 })
 
+// Quick unit test of the GRID token
+// https://github.com/ethereum/EIPs/issues/661
+describe('Provable burn', function(done) {
+
+  it('Should provably burn 10% of the first users tokens', function(done) {
+    let a = accounts[0];
+    let grid = config.addresses.grid;
+
+    let _balance;
+    let to_burn;
+    let bal_data = `0x70a08231${util.zfill(a.address)}`;
+
+    util.call(grid, bal_data)
+    .then((__balance) => {
+      _balance = parseInt(__balance);
+      to_burn = 0.1*_balance;
+      return util.getBurnMessage(to_burn, grid, a.address)
+    })
+    .then((msg) => {
+      let sig = util.signMessage(msg, a.privateKey)
+      // burn(bytes32[3],uint8,uint256)
+      let data = `0xd7852acf${util.zfill(msg)}${util.zfill(sig.r)}${util.zfill(sig.s)}${util.zfill(sig.v)}${util.zfill(to_burn.toString(16))}`
+      let unsigned = util.formUnsigned(a.address, grid, data, 0)
+      return util.sendTxPromise(unsigned, a.privateKey)
+    })
+    .then((hash) => {
+      return util.call(grid, bal_data)
+    })
+    .then((new_bal) => {
+      assert.equal(parseInt(new_bal), _balance-to_burn)
+      done();
+    })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should provably burn 100% of the last users tokens', function(done) {
+    let a = accounts[accounts.length-1];
+    let grid = config.addresses.grid;
+
+    let _balance;
+    let to_burn;
+    let bal_data = `0x70a08231${util.zfill(a.address)}`;
+
+    util.call(grid, bal_data)
+    .then((__balance) => {
+      _balance = parseInt(__balance);
+      to_burn = _balance;
+      return util.getBurnMessage(to_burn, grid, a.address)
+    })
+    .then((msg) => {
+      let sig = util.signMessage(msg, a.privateKey)
+      // burn(bytes32[3],uint8,uint256)
+      let data = `0xd7852acf${util.zfill(msg)}${util.zfill(sig.r)}${util.zfill(sig.s)}${util.zfill(sig.v)}${util.zfill(to_burn.toString(16))}`
+      let unsigned = util.formUnsigned(a.address, grid, data, 0)
+      return util.sendTxPromise(unsigned, a.privateKey)
+    })
+    .then((hash) => {
+      return util.call(grid, bal_data)
+    })
+    .then((new_bal) => {
+      assert.equal(parseInt(new_bal), _balance-to_burn)
+      done();
+    })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+})
+
+
 describe('Wrap-up', function(done) {
   it('Should make sure block number is correct', function(done) {
     let b = config.web3.eth.blockNumber;
-    assert.equal(b, start_block+NUM_TXN+N_FAIL+POST_SALE_TXN+1); // Added ether withdrawal
+    assert.equal(b, start_block+NUM_TXN+N_FAIL+POST_SALE_TXN+3); // Added ether withdrawal + burns
     done();
   })
 })
