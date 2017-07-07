@@ -34,7 +34,7 @@ const N_PRESALE = 2;
 
 // Each pre-saler gets white listed and then contributes
 // This accounts for a total of two transactions/blocks per presaler
-const START_WAIT = 2*N_PRESALE;
+const START_WAIT = 2*N_PRESALE + 1;
 
 // Number of transactions to occur while the sale is underway
 const NUM_TXN = N_ACCT - N_PRESALE - N_FAIL;
@@ -129,7 +129,13 @@ describe('Pre-sale', function(done) {
 
 describe('Contribution', function(done) {
 
-  it('Should make sure the sale starts on this block', function(done) {
+  it('Should do something useless for 1 block', function(done) {
+    util.somethingUseless()
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should make sure the sale starts this block', function(done) {
     let b = config.web3.eth.blockNumber;
     assert.isAtLeast(b, start_block, "Start block has not been reached")
     done();

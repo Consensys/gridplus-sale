@@ -130,7 +130,7 @@ contract('TokenSale', function(accounts) {
   it('Should setup the first token sale simulation.', function() {
     // There are several tx that happen after setting this
     let Rmax = 960;
-    start1 = config.web3.eth.blockNumber + 10;
+    start1 = config.web3.eth.blockNumber + 14;
     let L = 5;
     let cap = 0.5 * Math.pow(10, 18);
     let y_int_denom = 5;
@@ -138,11 +138,22 @@ contract('TokenSale', function(accounts) {
     token_sales[0].SetupSale(Rmax, cap, start1, L, y_int_denom, m_denom)
   })
 
+  it('Should set the spot rate of the first sale', function() {
+    let C = 200;
+    token_sales[0].SetPrice(C)
+  })
+
+  it('Should fail to set the spot rate of the first sale a second time', function() {
+    let C = 300;
+    token_sales[0].SetPrice(C)
+    .then(() => {})
+    .catch((err) => { assert.notEqual(err, null); })
+  })
 
   it('Should setup the second token sale simulation.', function() {
     // There are several tx that happen after setting this
     let Rmax = 960;
-    start2 = start1 + 28;
+    start2 = start1 + 30;
     let L = 8;
     let cap = 0.5 * Math.pow(10, 18)
     let y_int_denom = 5;
@@ -150,11 +161,16 @@ contract('TokenSale', function(accounts) {
     token_sales[1].SetupSale(Rmax, cap, start2, L, y_int_denom, m_denom)
   })
 
+  it('Should set the spot rate of the second sale', function() {
+    let C = 200;
+    token_sales[1].SetPrice(C)
+  })
+
   it('Should setup the third token sale simulation', function() {
     // This will trigger on the 47th transaction
     let Rmax = 960;
     // 18 transactions from the previous sale + 50 pre-sale participants + 200 total accounts
-    start3 = start2 + 18 + 100 + 200;
+    start3 = start2 + 19 + 100 + 200;
     let L = 150;
     let cap = 100000 * Math.pow(10, 18);
     // These will not be the parameters in the actual sale.
@@ -164,6 +180,12 @@ contract('TokenSale', function(accounts) {
     let m_denom = 5;
     token_sales[2].SetupSale(Rmax, cap, start3, L, y_int_denom, m_denom);
   })
+
+  it('Should set the spot rate of the first sale', function() {
+    let C = 200;
+    token_sales[2].SetPrice(C)
+  })
+
 
   it('Should switch admin for sale #2', function() {
     token_sales[1].SwitchAdmin(config.setup.admin_addr)

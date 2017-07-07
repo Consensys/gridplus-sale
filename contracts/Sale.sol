@@ -8,15 +8,17 @@ contract Sale {
   address public GRID;
   mapping (address => uint) wei_sent;      // Amounts of wei sent
   mapping (address => bool) presale;       // Whitelisted presale participants
+  uint public wei_remaining;               // Amount of wei belonging to participants who have not received GRID
   uint public start;                       // Starting block
   uint public end;                         // Ending block
-  uint public cap;                         // Cap on the total wei to raise
+  uint public cap;                         // Cap on the total USD to raise (converted to wei before the sale)
+  bool public cap_set;                     // True if the USD cap has been converted to wei
   uint public Rmax;                        // Maximum reward (qGRID/WEI), multiple of 5
   uint public Rf;                          // Final reward (qGRID/WEI)
   bool private hatch_open;                 // Escape hatch
 
-  uint public m_denom;                     // denominator of slope (should be 50,000)
-  uint public y_int_denom;                 // denominator of y-intercept (should be 5)
+  uint public a_2;                     // denominator of slope (should be 50,000)
+  uint public a_1;                 // denominator of y-intercept (should be 5)
 
   //============================================================================
   // PUBLIC SALE
@@ -24,15 +26,23 @@ contract Sale {
 
   // The token sale
   function() payable {
-    if (block.number < start && presale[msg.sender] == true) {
+    if (hatch_open == true) {
+      throw;
+    } else if (
+      block.number < start
+      && presale[msg.sender] == true
+    ) {
       // For whitelisted pre-sale participants
       wei_sent[msg.sender] = safeAdd(wei_sent[msg.sender], msg.value);
+      wei_remaining = safeAdd(wei_remaining, msg.value);
     } else if (
       block.number >= start && block.number <= end
       && msg.value + address(this).balance <= cap
       && presale[msg.sender] == false  // pre-salers cannot participate in the regular sale
+      && cap_set == true
     ) {
       wei_sent[msg.sender] = safeAdd(wei_sent[msg.sender], msg.value);
+      wei_remaining = safeAdd(wei_remaining, msg.value);
       // Update the price
       uint r = CalcReward();
       if (r > Rmax) { r = Rmax; }
@@ -62,12 +72,12 @@ contract Sale {
     if (block.number < start || block.number > end) { throw; }
     else {
       //R = (Rmax/5)  + (Rmax * (Bi - B0))/50,000
-      uint y_int = safeDiv(Rmax, y_int_denom);
+      uint y_int = safeDiv(Rmax, a_1);
 
       uint d_block = safeSub(block.number, start);
       // 0.0005 eth == 50000000000000 wei
       uint _m = safeMul(Rmax, d_block);
-      uint m = safeDiv(_m, m_denom);
+      uint m = safeDiv(_m, a_2);
       return safeAdd(y_int, m);
     }
   }
@@ -83,13 +93,11 @@ contract Sale {
 
   // If we want to kick a presaler out for some reason
   function VentPresale(address user) onlyAdmin() {
-    if (start > block.number) { throw; }
-    else {
-      uint amount = wei_sent[user];
-      wei_sent[user] = 0;
-      user.call.gas(21000).value(amount);
-      presale[user] = false;
-    }
+    uint amount = wei_sent[user];
+    wei_sent[user] = 0;
+    wei_remaining = safeSub(wei_remaining, amount);
+    user.call.gas(21000).value(amount);
+    presale[user] = false;
   }
 
   //============================================================================
@@ -139,12 +147,13 @@ contract Sale {
   }
 
   // Parameterize the sale
-  function SetupSale(uint _Rmax, uint _cap, uint _start, uint length, uint _y_den, uint _m_den) onlyAdmin() {
+  function SetupSale(uint _Rmax, uint _cap, uint _start, uint length, uint _a_1, uint _a_2) onlyAdmin() {
     // Can only do this once
     if (start == 0) {
-      y_int_denom = _y_den;
-      m_denom = _m_den;
+      a_1 = _a_1;
+      a_2 = _a_2;
       cap = _cap;
+      //cap_set = false;
       Rmax = _Rmax;  // This needs to be a multiple of 5
       start = _start;
       end = length + _start;
@@ -153,8 +162,31 @@ contract Sale {
     }
   }
 
+  // Convert the cap (in USD) to wei using a spot price. This can only happen once.
+  function SetPrice(uint spot) onlyAdmin() {
+    if (cap_set == true) { throw; }
+    cap = safeMul(cap, spot);
+    cap_set = true;
+  }
+
+  // GRID may only be moved once the sale is over amd all GRID have been
+  // withdrawn by participants
+  function MoveGRID(address to) onlyAdmin() {
+    if (block.number > end && start > 0 && wei_remaining == 0) {
+      ERC20Plus grid = ERC20Plus(GRID);
+      uint balance = grid.balanceOf(address(this));
+      if (!grid.transfer(to, balance)) { throw; }
+    }
+  }
+
+  // Ether may only be moved once all GRID have been withdrawn.
+  // This includes the amount of GRID moved by Grid+.
   function MoveFunds(address to) onlyAdmin() {
-    to.transfer(address(this).balance);
+    if (block.number > end && start > 0 && wei_remaining == 0) {
+      ERC20Plus grid = ERC20Plus(GRID);
+      if (grid.balanceOf(address(this)) > 0) { throw; }
+      to.transfer(address(this).balance);
+    }
   }
 
   function SwitchAdmin(address new_admin) onlyAdmin() {
@@ -180,6 +212,7 @@ contract Sale {
     // Calculate the amount of GRID to send the contributor
     uint contribution = wei_sent[user];
     wei_sent[user] = 0;
+    wei_remaining = safeSub(wei_remaining, contribution);
 
     // Make sure we don't go over the max reward
     uint max_reward = Rmax*contribution;
@@ -202,8 +235,8 @@ contract Sale {
   //============================================================================
 
   // Open or close the escape hatch
-  function Escape(bool open) onlyAdmin() {
-    hatch_open = open;
+  function Escape() onlyAdmin() {
+    hatch_open = true;
   }
 
   // User may withdraw ether sent to the contract at any time if the hatch is open.

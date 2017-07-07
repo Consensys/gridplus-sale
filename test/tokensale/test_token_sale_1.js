@@ -183,6 +183,20 @@ describe('Post-contribution', function(done) {
     .catch((err) => { assert.equal(err, null, err) })
   })
 
+  it('Should move GRID to admins address', function(done) {
+    let data = `0x21a8305e${util.zfill(config.setup.admin_addr)}`;
+    let unsigned = util.formUnsigned(config.setup.addr, sale, data, 0);
+    util.sendTxPromise(unsigned, config.setup.pkey)
+    .then((hash) =>{
+      let bal_data = `0x70a08231${util.zfill(sale)}`
+      return util.call(config.addresses.grid, bal_data)
+    })
+    .then((bal) => {
+      assert.equal(bal, 0, 'GRID not withdrawn from sale')
+      done();
+    })
+  })
+
   it('Should move ether to admins address', function(done) {
     let _balance = config.web3.eth.getBalance(config.setup.admin_addr);
     let _contract_bal = config.web3.eth.getBalance(sale);
@@ -272,7 +286,7 @@ describe('Provable burn', function(done) {
 describe('Wrap-up', function(done) {
   it('Should make sure block number is correct', function(done) {
     let b = config.web3.eth.blockNumber;
-    assert.equal(b, start_block+NUM_TXN+N_FAIL+POST_SALE_TXN+3); // Added ether withdrawal + burns
+    assert.equal(b, start_block+NUM_TXN+N_FAIL+POST_SALE_TXN+4); // Added ether withdrawal + burns
     done();
   })
 })

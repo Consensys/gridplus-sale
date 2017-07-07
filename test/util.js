@@ -170,3 +170,13 @@ exports.signMessage = function(msg, pkey) {
   };
   return parsed_sig;
 }
+
+// Useless transaction (to move the block number ahead by 1)
+exports.somethingUseless = function() {
+  return new Promise((resolve, reject) => {
+    let unsigned = formUnsigned(config.setup.addr, config.setup.addr, 0, 1);
+    sendTxPromise(unsigned, config.setup.pkey)
+    .then(() => { resolve(true); })
+    .catch((err) => { reject(err); })
+  })
+}
