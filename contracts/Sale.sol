@@ -30,6 +30,7 @@ contract Sale {
     } else if (
       block.number >= start && block.number <= end
       && msg.value + address(this).balance <= cap
+      && presale[msg.sender] == false  // pre-salers cannot participate in the regular sale
     ) {
       wei_sent[msg.sender] = safeAdd(wei_sent[msg.sender], msg.value);
       // Update the price
