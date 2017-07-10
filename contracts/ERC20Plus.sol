@@ -18,8 +18,6 @@ contract ERC20Plus {
     function approve(address spender, uint value) returns (bool ok);
 
     // Provable Burn
-    function burn(bytes32[3] data, uint8 v, uint value) returns (bool ok);
+    function burn(bytes32[4] data, uint value) returns (bool ok);
     function getNonce(address user) constant returns (uint nonce);
-
-    function tmp(uint value, address user) constant returns(bytes32 msg);
 }

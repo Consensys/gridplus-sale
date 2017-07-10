@@ -139,8 +139,8 @@ function callFaucet(to, from, pkey, amt) {
 // Get the message to sign and send to provableBurn
 exports.getBurnMessage = function(value, contract, user) {
   return new Promise((resolve, reject) => {
-    // First 4 bytes of "burn"
-    let word = "0xf43e8cfd";
+    // First 4 bytes of Keccak-256 hash of "burn(bytes32[3],uint256)"
+    let word = "0x066bbd48";
     // Get the nonce of this user
     let data = `0x2d0335ab${zfill(user)}`
     // Message

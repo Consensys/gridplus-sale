@@ -65,13 +65,16 @@ contract GRID is ERC20Plus {
   // ADDITIONAL FUNCTION
   //============================================================================
 
-  function burn(bytes32[3] data, uint8 v, uint value) returns (bool) {
-    // data[0]    Hash of tightly packed params
+  function burn(bytes32[4] data, uint value) returns (bool) {
+    // data[0]    hashed message
     // data[1]    r of signature
     // data[2]    s of signature
-    // Keccak-256 hash of "burn"
-    bytes4 word = 0xf43e8cfd;
-    address signer = ecrecover(data[0], v, data[1], data[2]);
+    // data[3]    v of signature
+
+    // Keccak-256 hash of "burn(bytes32[4],uint256)"
+    bytes4 word = 0x066bbd48;
+
+    address signer = ecrecover(data[0], uint8(data[3]), data[1], data[2]);
     uint nonce = nonces[signer];
 
     // Make sure the hash provided is of the channel id and the amount sent

@@ -234,8 +234,8 @@ describe('Provable burn', function(done) {
     })
     .then((msg) => {
       let sig = util.signMessage(msg, a.privateKey)
-      // burn(bytes32[3],uint8,uint256)
-      let data = `0xd7852acf${util.zfill(msg)}${util.zfill(sig.r)}${util.zfill(sig.s)}${util.zfill(sig.v)}${util.zfill(to_burn.toString(16))}`
+      // burn(bytes32[4],uint256)
+      let data = `0x066bbd48${util.zfill(msg)}${util.zfill(sig.r)}${util.zfill(sig.s)}${util.zfill(sig.v)}${util.zfill(to_burn.toString(16))}`
       let unsigned = util.formUnsigned(a.address, grid, data, 0)
       return util.sendTxPromise(unsigned, a.privateKey)
     })
@@ -265,8 +265,8 @@ describe('Provable burn', function(done) {
     })
     .then((msg) => {
       let sig = util.signMessage(msg, a.privateKey)
-      // burn(bytes32[3],uint8,uint256)
-      let data = `0xd7852acf${util.zfill(msg)}${util.zfill(sig.r)}${util.zfill(sig.s)}${util.zfill(sig.v)}${util.zfill(to_burn.toString(16))}`
+      // burn(bytes32[4],uint256)
+      let data = `0x066bbd48${util.zfill(msg)}${util.zfill(sig.r)}${util.zfill(sig.s)}${util.zfill(sig.v)}${util.zfill(to_burn.toString(16))}`
       let unsigned = util.formUnsigned(a.address, grid, data, 0)
       return util.sendTxPromise(unsigned, a.privateKey)
     })
