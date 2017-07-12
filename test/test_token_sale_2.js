@@ -1,4 +1,4 @@
-// Deploy GRID and run Token Sale Simulation #1
+// Deploy GRID and run Token Sale Simulation #2
 //
 // Note that this simulation is intended to run on testrpc where each transaction
 // is sealed into a separate block. Thus, calibrating the start and end blocks
@@ -28,21 +28,21 @@ let Rmax;
 //====================================
 
 // Number of total accounts
-const N_ACCT = 6;
+const N_ACCT = 10;
 
 // Number of accounts designed to be excluded (i.e. fail to contribute)
 // These always come AFTER the sale has ended (i.e. that is the souce of their failure)
-const N_FAIL = 1;
+const N_FAIL = 0;
 
 // Number of presale participants
-const N_PRESALE = 0;
+const N_PRESALE = 2;
 
 // Each pre-saler gets white listed and then contributes
 // This accounts for a total of two transactions/blocks per presaler
 const START_WAIT = 2*N_PRESALE;
 
 // Number of transactions to occur while the sale is underway
-const NUM_TXN = N_ACCT - N_FAIL - N_PRESALE;
+const N_TXN = N_ACCT - N_FAIL - N_PRESALE;
 
 // Number of transactions after the end_block of the sale
 const POST_SALE_TXN = 5;
@@ -116,12 +116,11 @@ contract('TokenSale', function(accounts) {
     })
   })
 
-
   it('Should setup the token sale simulation.', function() {
     // There are several tx that happen after setting this
     Rmax = 960;
-    start_block = config.web3.eth.blockNumber + N_ACCT + 3;
-    let L = 5;
+    start_block = config.web3.eth.blockNumber + N_ACCT + START_WAIT + 4;
+    let L = N_TXN;
     let cap = 0.5 * Math.pow(10, 18);
     let y_int_denom = 5;
     let m_denom = 50000;
@@ -151,7 +150,7 @@ contract('TokenSale', function(accounts) {
   })
 
   it('Should send a faucet request from each account', function(done) {
-    this.timeout(5000);
+    this.timeout(10000);
     util.FaucetAccounts(accounts)
     .then((success) => { return Promise.delay(1000); })
     .then(() => { done(); })
@@ -161,12 +160,14 @@ contract('TokenSale', function(accounts) {
     let current_block = config.web3.eth.blockNumber;
     sale.start()
     .then((start) => {
-      assert.equal(current_block, parseInt(start), `Sale should begin on ${parseInt(start)} but it is ${current_block} right now.`)
+      // The 1 is to make sure pre-salers got in 1 block before the start, per Sale.sol
+      let calc_start = current_block + START_WAIT + 1;
+      assert.equal(calc_start, parseInt(start), `Sale should begin on ${parseInt(start)} but it is ${calc_start} right now.`)
       return sale.end()
     })
     .then((end) => {
-      assert.equal(current_block+NUM_TXN, parseInt(end), `Sale should begin on ${parseInt(end)}.`);
-      done()
+      assert.equal(current_block+START_WAIT+N_TXN+1, parseInt(end), `Sale should end on ${parseInt(end)}.`);
+      done();
     })
   })
 
@@ -178,8 +179,41 @@ contract('TokenSale', function(accounts) {
     })
   })
 
-  it('Should contribute 0.1 eth from 5 accounts', function(done) {
-    Promise.resolve(accounts.slice(0, N_ACCT))
+  it('Should whitelist accouts 1 and 2 to participate in the pre-sale', function(done) {
+    Promise.all(
+      accounts.slice(0, N_PRESALE)
+      .map((a) => {
+        whitelistPresale(sale, a)
+      })
+    )
+    .then(() => { done(); })
+  })
+
+  it('Should let the presalers contribute', function(done) {
+    Promise.resolve(accounts.slice(0, N_PRESALE))
+    .map((a) => {
+      let unsigned = util.formUnsigned(a.address, sale.address, 0, amt)
+      return util.sendTxPromise(unsigned, a.privateKey)
+    })
+    .then(() => { done(); })
+    .catch((err) => { console.log('err', err); assert.equal(err, null, err); })
+  })
+
+  // Had to make sure pre-salers got in 1 block before the start, per Sale.sol
+  it('Should do something useless for 1 block', function(done) {
+    util.somethingUseless()
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should make sure the sale starts this block', function(done) {
+    let b = config.web3.eth.blockNumber;
+    assert.isAtLeast(b, start_block, "Start block has not been reached")
+    done();
+  })
+
+  it('Should contribute 0.1 eth from accounts', function(done) {
+    Promise.resolve(accounts.slice(N_PRESALE, N_ACCT))
     .map((a) => {
       let unsigned = util.formUnsigned(a.address, sale.address, 0, amt)
       return util.sendTxPromise(unsigned, a.privateKey)
@@ -188,23 +222,16 @@ contract('TokenSale', function(accounts) {
     .catch((err) => { assert.equal(err, null, err) })
   })
 
-  it('Should fail at the 6th account', function(done) {
-    let unsigned = util.formUnsigned(accounts[4].address, sale, 0, amt)
-    util.sendTxPromise(unsigned, accounts[4].privateKey)
-    .then((success) => { assert.equal(1, 0, 'Tx succeeded but should not have.'); done(); })
-    .catch((err) => { assert.notEqual(err, null, 'Tx did not throw but should have.'); done(); })
-  })
-
   it('Should make sure block number is correct', function(done) {
     let b = config.web3.eth.blockNumber;
-    assert.equal(b, start_block+NUM_TXN);
+    assert.equal(b, start_block+N_TXN);
     done();
   })
 
   it('Should get the final sale price', function(done) {
     sale.Rf()
     .then((Rf) => {
-      let expected_rf = Math.floor(Rmax/5) + Math.floor((NUM_TXN*Rmax)/50000);
+      let expected_rf = Math.floor(Rmax/5) + Math.floor((N_TXN*Rmax)/50000);
       assert.equal(parseInt(Rf), expected_rf)
       done();
     })
@@ -226,9 +253,21 @@ contract('TokenSale', function(accounts) {
       })
     )
     .then(() => { done(); })
-
   })
 
+  function whitelistPresale(sale, a) {
+    return new Promise((resolve, reject) => {
+      sale.WhitelistPresale(a.address)
+      .then(() => {
+        return sale.IsPresaler(a.address)
+      })
+      .then((is_presaler) => {
+        assert.equal(is_presaler, true, `${a.address} is not whitelisted`)
+        resolve(true);
+      })
+      .catch((err) => { reject(err); })
+    })
+  }
 
   function check(sale, a) {
     return new Promise((resolve, reject) => {
@@ -256,6 +295,7 @@ contract('TokenSale', function(accounts) {
         assert.equal(balance, reward, "Did not receive GRIDs.");
         resolve(true);
       })
+      .catch((err) => { reject(err)})
     })
   }
 

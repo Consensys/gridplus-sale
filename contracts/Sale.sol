@@ -230,6 +230,10 @@ contract Sale {
     }
   }
 
+  function IsPresaler(address user) public constant returns (bool) {
+    return presale[user];
+  }
+
   //============================================================================
   // EMERGENCY
   //============================================================================
