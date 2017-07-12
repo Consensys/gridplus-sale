@@ -116,6 +116,7 @@ exports.FaucetAccounts = function(accounts, _amt) {
     let from = config.setup.addr;
     let pkey = config.setup.pkey;
     let amt = _amt || 0.1;
+
     Promise.resolve(accounts)
     .each((a) => { return callFaucet(a.address, from, pkey, amt)})
     .then(() => { resolve(true); })
