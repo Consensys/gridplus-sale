@@ -7,7 +7,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "truffle migrate && truffle test test/token_sale.js && mocha test/tokensale/test_token_sale_1.js && mocha test/tokensale/test_token_sale_2.js && mocha test/tokensale/test_token_sale_3.js"
+    "test": "truffle migrate && truffle test test/1_simulation && truffle test test/2_simulation.js && truffle test test/3_simulation",
+    "coverage": "./node_modules/.bin/solidity-coverage"
   },
   "repository": {
     "type": "git",
@@ -29,5 +30,8 @@
     "jsonfile": "^3.0.0",
     "solidity-sha3": "^0.4.1",
     "web3": "^0.19.1"
+  },
+  "devDependencies": {
+    "solidity-coverage": "^0.1.7"
   }
 }
