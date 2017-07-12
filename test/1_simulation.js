@@ -22,6 +22,7 @@ let grid_supply = '16000000000000000000000000'
 let amt = 9000000000000000 // The amount everyone will contribute
 let start_block;
 let Rmax;
+let rf;
 
 //====================================
 // BLOCK TIMING constants
@@ -179,7 +180,7 @@ contract('TokenSale', function(accounts) {
   })
 
   it('Should contribute 0.1 eth from 5 accounts', function(done) {
-    Promise.resolve(accounts.slice(0, N_ACCT))
+    Promise.resolve(accounts.slice(0, N_ACCT-N_FAIL))
     .map((a) => {
       let unsigned = util.formUnsigned(a.address, sale.address, 0, amt)
       return util.sendTxPromise(unsigned, a.privateKey)
@@ -210,7 +211,6 @@ contract('TokenSale', function(accounts) {
     })
   })
 
-  let rf;
   it('Should get the final reward', function(done) {
     sale.Rf()
     .then((_rf) => { rf = _rf; done(); })
@@ -220,7 +220,7 @@ contract('TokenSale', function(accounts) {
     this.timeout(60000)
 
     Promise.all(
-      accounts.slice(0, N_ACCT)
+      accounts.slice(0, N_ACCT-N_FAIL)
       .map((a) => {
         check(sale, a)
       })
@@ -229,35 +229,33 @@ contract('TokenSale', function(accounts) {
 
   })
 
-
-  function check(sale, a) {
-    return new Promise((resolve, reject) => {
-      let reward;
-      let balance;
-      let contribution;
-      sale.Contribution(a.address)
-      .then((_contribution) => {
-        contribution = _contribution.toNumber();
-        // Determine how many GRIDs should be awarded
-        return sale.Reward(a.address)
-      })
-      .then((_reward) => {
-        reward = _reward.toNumber();
-        assert.equal(reward, contribution*rf, "Got wrong reward")
-        // Claim that reward
-        let data = `0xf6761151${util.zfill(a.address)}`
-        let unsigned = util.formUnsigned(a.address, sale.address, data, 0)
-        return util.sendTxPromise(unsigned, a.privateKey)
-      })
-      .then((hash) => {
-        return grid_contract.balanceOf(a.address)
-      })
-      .then((balance) => {
-        assert.equal(balance, reward, "Did not receive GRIDs.");
-        resolve(true);
-      })
-    })
-  }
-
-
 })
+
+function check(sale, a) {
+  return new Promise((resolve, reject) => {
+    let reward;
+    let balance;
+    let contribution;
+    sale.Contribution(a.address)
+    .then((_contribution) => {
+      contribution = _contribution.toNumber();
+      // Determine how many GRIDs should be awarded
+      return sale.Reward(a.address)
+    })
+    .then((_reward) => {
+      reward = _reward.toNumber();
+      assert.equal(reward, contribution*rf, "Got wrong reward")
+      // Claim that reward
+      let data = `0xf6761151${util.zfill(a.address)}`
+      let unsigned = util.formUnsigned(a.address, sale.address, data, 0)
+      return util.sendTxPromise(unsigned, a.privateKey)
+    })
+    .then((hash) => {
+      return grid_contract.balanceOf(a.address)
+    })
+    .then((balance) => {
+      assert.equal(balance, reward, "Did not receive GRIDs.");
+      resolve(true);
+    })
+  })
+}

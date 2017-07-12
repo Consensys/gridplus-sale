@@ -1,5 +1,3 @@
-var data = require('./data.json');
-
 exports.setup = {
   pkey: '8e928c90ecf0df421a510fef224698f81356c6d157efb8dfd46209025b0916f3',
   addr: '0xed6e14a6d2ef654f4dae69192f2e0ef767050619',
@@ -9,16 +7,6 @@ exports.setup = {
 
 exports.constants = {
   block_time: 1500
-}
-
-exports.token_sale = {
-  one: data.token_sale_1,
-  two: data.token_sale_2,
-  three: data.token_sale_3,
-}
-
-exports.addresses = {
-  grid: data.grid_addr,
 }
 
 var web3 = require('web3');
