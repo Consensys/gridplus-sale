@@ -248,8 +248,9 @@ contract('TokenSale', function(accounts) {
 
     Promise.all(
       accounts.slice(0, N_ACCT)
-      .map((a) => {
-        check(sale, a)
+      .map((a, i) => {
+        let presaler = i > N_PRESALE-1 ? false : true;
+        check(sale, a, presaler)
       })
     )
     .then(() => { done(); })
@@ -269,7 +270,7 @@ contract('TokenSale', function(accounts) {
     })
   }
 
-  function check(sale, a) {
+  function check(sale, a, presale) {
     return new Promise((resolve, reject) => {
       let reward;
       let balance;
@@ -282,7 +283,8 @@ contract('TokenSale', function(accounts) {
       })
       .then((_reward) => {
         reward = _reward.toNumber();
-        assert.equal(reward, contribution*rf, "Got wrong reward")
+        let factor = presale ? 1.15 : 1;
+        assert.equal(reward, factor*contribution*rf, "Got wrong reward")
         // Claim that reward
         let data = `0xf6761151${util.zfill(a.address)}`
         let unsigned = util.formUnsigned(a.address, sale.address, data, 0)
