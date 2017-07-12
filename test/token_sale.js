@@ -153,7 +153,7 @@ contract('TokenSale', function(accounts) {
   it('Should setup the second token sale simulation.', function() {
     // There are several tx that happen after setting this
     let Rmax = 960;
-    start2 = start1 + 30;
+    start2 = start1 + 28;
     let L = 8;
     let cap = 0.5 * Math.pow(10, 18)
     let y_int_denom = 5;

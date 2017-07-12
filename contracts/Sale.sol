@@ -1,6 +1,6 @@
 // Token sale contract
 pragma solidity ^0.4.11;
-import "./ERC20Plus.sol";
+import "./ERC20.sol";
 
 contract Sale {
 
@@ -59,7 +59,7 @@ contract Sale {
       uint amt = GetUserReward(user);
 
       // Instantiate the grid token and transfer
-      ERC20Plus grid = ERC20Plus(GRID);
+      ERC20 grid = ERC20(GRID);
       if (!grid.transfer(user, amt)) { throw; }
     }
   }
@@ -173,7 +173,7 @@ contract Sale {
   // withdrawn by participants
   function MoveGRID(address to) onlyAdmin() {
     if (block.number > end && start > 0 && wei_remaining == 0) {
-      ERC20Plus grid = ERC20Plus(GRID);
+      ERC20 grid = ERC20(GRID);
       uint balance = grid.balanceOf(address(this));
       if (!grid.transfer(to, balance)) { throw; }
     }
@@ -183,7 +183,7 @@ contract Sale {
   // This includes the amount of GRID moved by Grid+.
   function MoveFunds(address to) onlyAdmin() {
     if (block.number > end && start > 0 && wei_remaining == 0) {
-      ERC20Plus grid = ERC20Plus(GRID);
+      ERC20 grid = ERC20(GRID);
       if (grid.balanceOf(address(this)) > 0) { throw; }
       to.transfer(address(this).balance);
     }

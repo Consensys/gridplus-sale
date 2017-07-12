@@ -1,7 +1,7 @@
 //ERC20 specification plus a burn function
 pragma solidity ^0.4.8;
 
-contract ERC20Plus {
+contract ERC20 {
 
     // Events
     event Transfer(address indexed from, address indexed to, uint value);
@@ -16,8 +16,4 @@ contract ERC20Plus {
     function transfer( address to, uint value) returns (bool ok);
     function transferFrom( address from, address to, uint value) returns (bool ok);
     function approve(address spender, uint value) returns (bool ok);
-
-    // Provable Burn
-    function burn(bytes32[4] data, uint value) returns (bool ok);
-    function getNonce(address user) constant returns (uint nonce);
 }

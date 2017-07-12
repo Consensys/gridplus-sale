@@ -1,11 +1,8 @@
 pragma solidity ^0.4.8;
 
-import "./ERC20Plus.sol";
+import "./ERC20.sol";
 
-contract GRID is ERC20Plus {
-
-  mapping(bytes32 => bool) played;
-  mapping(address => uint) nonces;
+contract GRID is ERC20 {
 
   //============================================================================
   // ERC20
@@ -60,52 +57,6 @@ contract GRID is ERC20Plus {
   function allowance(address owner, address spender) constant returns (uint) {
     return approvals[owner][spender];
   }
-
-  //============================================================================
-  // ADDITIONAL FUNCTION
-  //============================================================================
-
-  function burn(bytes32[4] data, uint value) returns (bool) {
-    // data[0]    hashed message
-    // data[1]    r of signature
-    // data[2]    s of signature
-    // data[3]    v of signature
-
-    // Keccak-256 hash of "burn(bytes32[4],uint256)"
-    bytes4 word = 0x066bbd48;
-
-    address signer = ecrecover(data[0], uint8(data[3]), data[1], data[2]);
-    uint nonce = nonces[signer];
-
-    // Make sure the hash provided is of the channel id and the amount sent
-    bytes32 proof = sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
-
-    // Ensure the proof matches, send the value, send the remainder, and delete the channel
-    if (proof != data[0]) { return false; }
-    if (played[proof] == true) { return false; }
-
-    // Burn tokens
-    balances[signer] = safeSub(balances[signer], value);
-    supply = safeSub(supply, value);
-    Transfer(signer, 0, value);
-
-    // Update state variables
-    played[proof] = true;
-    nonces[signer] += 1;
-
-    return true;
-  }
-
-  function getNonce(address user) constant returns (uint) {
-    return nonces[user];
-  }
-
-  function tmp(uint value, address user) constant returns(bytes32) {
-    bytes4 word = 0xf43e8cfd;
-    uint nonce = nonces[user];
-    return sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
-  }
-
 
   //============================================================================
   // SAFE MATH FUNCTIONS
