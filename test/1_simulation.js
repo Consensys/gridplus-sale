@@ -219,14 +219,33 @@ contract('TokenSale', function(accounts) {
 
   it('Should claim GRID tokens', function(done) {
     this.timeout(60000)
-    Promise.all(
-      accounts.slice(0, N_ACCT_1-N_FAIL_1)
-      .map((a) => {
-        check(sale, a)
-      })
-    )
+    Promise.resolve(accounts.slice(0, N_ACCT_1-N_FAIL_1))
+    .map((a) => {
+      return check(sale, a)
+    })
     .then(() => { done(); })
   })
+
+  it('Should make sure all GRID were withdrawn', function(done) {
+    sale.wei_remaining()
+    .then((wei) => {
+      assert.equal(wei.toNumber(), 0, 'There is ether in the sale and should not be.')
+      done();
+    })
+  })
+
+  it('Should withdraw remaining GRID', function(done) {
+    sale.MoveGRID(accounts[0])
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should withdraw ether', function(done) {
+    sale.MoveFunds(accounts[0])
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
 
 
   //====================================
@@ -325,13 +344,19 @@ contract('TokenSale', function(accounts) {
     })
   })
 
+  it('Should make sure no ether has been contributed', function(done) {
+    sale.wei_remaining()
+    .then((wei) => {
+      assert.equal(wei.toNumber(), 0, 'There is ether in the sale and should not be.')
+      done();
+    })
+  })
+
   it('Should whitelist accouts 1 and 2 to participate in the pre-sale', function(done) {
-    Promise.all(
-      accounts.slice(0, N_PRESALE_2)
-      .map((a) => {
-        whitelistPresale(sale, a)
-      })
-    )
+    Promise.resolve(accounts.slice(0, N_PRESALE_2))
+    .map((a) => {
+      whitelistPresale(sale, a)
+    })
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
   })
@@ -375,7 +400,7 @@ contract('TokenSale', function(accounts) {
     .catch((err) => { assert.equal(err, null, err) })
   })
 
-  it('Should run blocks up to the start block, beginning the regular sale', function(done) {
+  it('Should run blocks up to the start block, ending the regular sale', function(done) {
     let current_block = config.web3.eth.blockNumber;
     // Make sure the chain is caught up
     let blocks_needed = end_block - current_block;
@@ -401,26 +426,50 @@ contract('TokenSale', function(accounts) {
     })
   })
 
+  it('Should make sure all ether has been contributed', function(done) {
+    Promise.resolve(web3.eth.getBalance(sale.address))
+    .then((wei) => {
+      assert.equal(wei.toNumber(), N_ACCT_2*amt, 'Not enough ether contributed')
+      done();
+    })
+  })
+
   it('Should claim GRID tokens for presalers', function(done) {
     this.timeout(60000)
-    Promise.all(
-      accounts.slice(0, N_PRESALE_2)
-      .map((a) => {
-        check(sale, a, true)
-      })
-    )
+    Promise.resolve(accounts.slice(0, N_PRESALE_2))
+    .map((a) => {
+      return check(sale, a, true)
+    })
     .then(() => { done(); })
   })
 
   it('Should claim GRID tokens for regular sale', function(done) {
     this.timeout(60000)
-    Promise.all(
-      accounts.slice(N_PRESALE_2, N_ACCT_2)
-      .map((a) => {
-        check(sale, a, false)
-      })
-    )
+    Promise.resolve(accounts.slice(N_PRESALE_2, N_ACCT_2))
+    .map((a) => {
+      return check(sale, a, false)
+    })
     .then(() => { done(); })
+  })
+
+  it('Should make sure all GRID tokens have been claimed', function(done) {
+    sale.wei_remaining()
+    .then((wei) => {
+      assert.equal(wei.toNumber(), 0, 'Someone has not claimed their GRID.')
+      done();
+    })
+  })
+
+  it('Should withdraw remaining GRID', function(done) {
+    sale.MoveGRID(accounts[0])
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should withdraw ether', function(done) {
+    sale.MoveFunds(accounts[0])
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
   })
 
   //====================================
@@ -479,6 +528,10 @@ contract('TokenSale', function(accounts) {
       })
       .then((balance) => {
         assert.equal(balance.toNumber(), reward, "Did not receive GRIDs.");
+        return sale.Contribution(a)
+      })
+      .then((contribution2) => {
+        assert.equal(contribution2, 0, 'Did not wash contribution number.')
         resolve(true);
       })
     })

@@ -4,6 +4,11 @@ import "./ERC20.sol";
 
 contract Sale {
 
+  event _Presale(address indexed user, uint value, uint time);
+  event _Sale(address indexed user, uint value, uint time);
+  event _Boot(address indexed user, uint time);
+  event _Withdraw(address indexed user, uint value, uint time);
+
   address private admin;
   address public GRID;
   mapping (address => uint) wei_sent;      // Amounts of wei sent
@@ -35,6 +40,7 @@ contract Sale {
       // For whitelisted pre-sale participants
       wei_sent[msg.sender] = safeAdd(wei_sent[msg.sender], msg.value);
       wei_remaining = safeAdd(wei_remaining, msg.value);
+      _Presale(msg.sender, msg.value, now);
     } else if (
       block.number >= start && block.number <= end
       && msg.value + address(this).balance <= cap
@@ -47,6 +53,7 @@ contract Sale {
       uint r = CalcReward();
       if (r > Rmax) { r = Rmax; }
       Rf = r;
+      _Sale(msg.sender, msg.value, now);
     } else { throw; }
   }
 
@@ -57,10 +64,37 @@ contract Sale {
     else if (address(this).balance < cap && end > block.number) { throw; }
     else {
       uint amt = GetUserReward(user);
+      wei_remaining = safeSub(wei_remaining, wei_sent[user]);
+      wei_sent[user] = 0;
 
       // Instantiate the grid token and transfer
       ERC20 grid = ERC20(GRID);
       if (!grid.transfer(user, amt)) { throw; }
+      _Withdraw(user, amt, now);
+    }
+  }
+
+  /*function foo(address user) {
+    wei_remaining = safeSub(wei_remaining, wei_sent[user]);
+  }*/
+
+  function GetUserReward(address user) returns (uint) {
+    // Calculate the amount of GRID to send the contributor
+    uint contribution = wei_sent[user];
+
+    // Make sure we don't go over the max reward
+    uint max_reward = Rmax*contribution;
+
+    if (presale[user] == true) {
+      // Presalers get up to 15% more tokens
+      uint _amt = safeMul(safeMul(contribution, Rf), uint(115));
+      uint amt = safeDiv(_amt, uint(100));
+      if (amt > max_reward) { return max_reward; }
+      else { return amt; }
+
+    } else {
+      // Normal partipants get the contribution times Rf
+      return safeMul(contribution, Rf);
     }
   }
 
@@ -98,6 +132,7 @@ contract Sale {
     wei_remaining = safeSub(wei_remaining, amount);
     user.call.gas(21000).value(amount);
     presale[user] = false;
+    _Boot(user, now);
   }
 
   //============================================================================
@@ -157,6 +192,7 @@ contract Sale {
       Rmax = _Rmax;  // This needs to be a multiple of 5
       start = _start;
       end = length + _start;
+      wei_remaining = 0;
     } else {
       throw;
     }
@@ -176,6 +212,8 @@ contract Sale {
       ERC20 grid = ERC20(GRID);
       uint balance = grid.balanceOf(address(this));
       if (!grid.transfer(to, balance)) { throw; }
+    } else {
+      throw;
     }
   }
 
@@ -186,6 +224,8 @@ contract Sale {
       ERC20 grid = ERC20(GRID);
       if (grid.balanceOf(address(this)) > 0) { throw; }
       to.transfer(address(this).balance);
+    } else {
+      throw;
     }
   }
 
@@ -206,28 +246,6 @@ contract Sale {
   function Reward(address user) public constant returns (uint) {
     uint amt = GetUserReward(user);
     return amt;
-  }
-
-  function GetUserReward(address user) returns (uint) {
-    // Calculate the amount of GRID to send the contributor
-    uint contribution = wei_sent[user];
-    wei_sent[user] = 0;
-    wei_remaining = safeSub(wei_remaining, contribution);
-
-    // Make sure we don't go over the max reward
-    uint max_reward = Rmax*contribution;
-
-    if (presale[user] == true) {
-      // Presalers get up to 15% more tokens
-      uint _amt = safeMul(safeMul(contribution, Rf), uint(115));
-      uint amt = safeDiv(_amt, uint(100));
-      if (amt > max_reward) { return max_reward; }
-      else { return amt; }
-
-    } else {
-      // Normal partipants get the contribution times Rf
-      return safeMul(contribution, Rf);
-    }
   }
 
   function IsPresaler(address user) public constant returns (bool) {
