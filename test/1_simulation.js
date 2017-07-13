@@ -5,6 +5,10 @@
 // is a function of how many on-chain transactions will take place before and
 // during each sale.
 //
+// NOTE: solcover runs random tests in the background which increases the block number
+// This is highly annoying, but we can get around it by checking the block number
+// against our expected blocknumber and having a "do something useless" function
+// to fill the gap
 var Promise = require('bluebird').Promise;
 var ethutil = require('ethereumjs-util');
 var config = require('../config.js');
@@ -17,10 +21,10 @@ var util = require('./util.js');
 let channels;
 let sale;
 let grid_contract;
-let accounts = [];
 let grid_supply = '16000000000000000000000000'
 let amt = 9000000000000000 // The amount everyone will contribute
 let start_block;
+let end_block;
 let Rmax;
 let rf;
 
@@ -38,15 +42,8 @@ const N_FAIL = 1;
 // Number of presale participants
 const N_PRESALE = 0;
 
-// Each pre-saler gets white listed and then contributes
-// This accounts for a total of two transactions/blocks per presaler
-const START_WAIT = 2*N_PRESALE;
-
-// Number of transactions to occur while the sale is underway
-const NUM_TXN = N_ACCT - N_FAIL - N_PRESALE;
-
-// Number of transactions after the end_block of the sale
-const POST_SALE_TXN = 5;
+// Block that the last participant partcipated on
+let last_sale_block;
 
 //====================================
 // TESTS
@@ -117,15 +114,16 @@ contract('TokenSale', function(accounts) {
     })
   })
 
-
+  let y_int_denom;
+  let m_denom;
   it('Should setup the token sale simulation.', function() {
     // There are several tx that happen after setting this
     Rmax = 960;
-    start_block = config.web3.eth.blockNumber + N_ACCT + 3;
-    let L = 5;
+    start_block = config.web3.eth.blockNumber + 3;
+    let L = 15;
     let cap = 0.5 * Math.pow(10, 18);
-    let y_int_denom = 5;
-    let m_denom = 50000;
+    y_int_denom = 5;
+    m_denom = 50000;
     sale.SetupSale(Rmax, cap, start_block, L, y_int_denom, m_denom)
   })
 
@@ -141,37 +139,31 @@ contract('TokenSale', function(accounts) {
     .catch((err) => { assert.notEqual(err, null); })
   })
 
-  it(`Should create ${N_ACCT} accounts`, function(done) {
-    this.timeout(5000)
-    util.createAccounts(N_ACCT)
-    .then((_accounts) => {
-      accounts = _accounts;
-      assert.equal(accounts.length, N_ACCT);
-      done();
-    })
-  })
-
-  it('Should send a faucet request from each account', function(done) {
-    this.timeout(5000);
-    util.FaucetAccounts(accounts)
-    .then((success) => { return Promise.delay(1000); })
-    .then(() => { done(); })
-  })
-
   it('Should get the starting block, ending block, and cap', function(done) {
-    let current_block = config.web3.eth.blockNumber;
+    let current_block;
+    let desired_block;
     sale.start()
     .then((start) => {
-      assert.equal(current_block, parseInt(start), `Sale should begin on ${parseInt(start)} but it is ${current_block} right now.`)
+      current_block = config.web3.eth.blockNumber;
+      desired_block = parseInt(start);
+      // Make sure the chain is caught up
+      let blocks_needed = desired_block - current_block;
+      assert.isAtLeast(blocks_needed, 0, 'Uh oh, you need to set your start block higher.')
+      return somethingUseless(blocks_needed)
+    })
+    .then(() => {
+      current_block = config.web3.eth.blockNumber;
+      assert.equal(current_block, desired_block, `Sale should begin on ${parseInt(desired_block)} but it is ${current_block} right now.`)
       return sale.end()
     })
     .then((end) => {
-      assert.equal(current_block+NUM_TXN, parseInt(end), `Sale should begin on ${parseInt(end)}.`);
+      end_block = parseInt(end)
       done()
     })
   })
 
   it('Should make sure the auction has enough GRID', function(done) {
+    let current_block = config.web3.eth.blockNumber;
     grid_contract.balanceOf(sale.address)
     .then((balance) => {
       assert.equal(balance.toNumber(), grid_supply)
@@ -180,12 +172,11 @@ contract('TokenSale', function(accounts) {
   })
 
   it('Should contribute 0.1 eth from 5 accounts', function(done) {
-    Promise.resolve(accounts.slice(0, N_ACCT-N_FAIL))
-    .map((a) => {
-      let unsigned = util.formUnsigned(a.address, sale.address, 0, amt)
-      return util.sendTxPromise(unsigned, a.privateKey)
+    contribute(sale, accounts.slice(0, 5))
+    .then((txhash) => {
+      last_sale_block = config.web3.eth.blockNumber;
+      done();
     })
-    .then((txhash) => { done(); })
     .catch((err) => { assert.equal(err, null, err) })
   })
 
@@ -198,27 +189,32 @@ contract('TokenSale', function(accounts) {
 
   it('Should make sure block number is correct', function(done) {
     let b = config.web3.eth.blockNumber;
-    assert.equal(b, start_block+NUM_TXN);
+    let blocks_needed = end_block - b;
+    assert.isAtLeast(blocks_needed, 0, 'Uh oh, too many blocks were inserted. Please increase sale length')
+    somethingUseless(blocks_needed)
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should ensure the sale got the right amount of ether', function(done) {
+    let eth = web3.eth.getBalance(sale.address);
+    assert.equal(5*amt, eth.toNumber())
     done();
   })
 
   it('Should get the final sale price', function(done) {
     sale.Rf()
     .then((Rf) => {
-      let expected_rf = Math.floor(Rmax/5) + Math.floor((NUM_TXN*Rmax)/50000);
+      let elapsed = last_sale_block - start_block;
+      let expected_rf = Math.floor(Rmax/y_int_denom) + Math.floor((elapsed*Rmax)/m_denom);
       assert.equal(parseInt(Rf), expected_rf)
+      rf = parseInt(Rf);
       done();
     })
   })
 
-  it('Should get the final reward', function(done) {
-    sale.Rf()
-    .then((_rf) => { rf = _rf; done(); })
-  })
-
   it('Should claim GRID tokens', function(done) {
     this.timeout(60000)
-
     Promise.all(
       accounts.slice(0, N_ACCT-N_FAIL)
       .map((a) => {
@@ -229,33 +225,61 @@ contract('TokenSale', function(accounts) {
 
   })
 
-})
 
-function check(sale, a) {
-  return new Promise((resolve, reject) => {
-    let reward;
-    let balance;
-    let contribution;
-    sale.Contribution(a.address)
-    .then((_contribution) => {
-      contribution = _contribution.toNumber();
-      // Determine how many GRIDs should be awarded
-      return sale.Reward(a.address)
+  function contribute(sale, accts) {
+    return new Promise((resolve, reject) => {
+      Promise.all(
+        accts
+        .map((a, i) => {
+          let tx = { value: amt, from: a, to: sale.address };
+          return Promise.resolve(web3.eth.sendTransaction(tx))
+        })
+      )
+      .then(() => { resolve(true); })
+      .catch((err) => { reject(err); })
     })
-    .then((_reward) => {
-      reward = _reward.toNumber();
-      assert.equal(reward, contribution*rf, "Got wrong reward")
-      // Claim that reward
-      let data = `0xf6761151${util.zfill(a.address)}`
-      let unsigned = util.formUnsigned(a.address, sale.address, data, 0)
-      return util.sendTxPromise(unsigned, a.privateKey)
+  }
+
+
+  function check(sale, a) {
+    return new Promise((resolve, reject) => {
+      let reward;
+      let balance;
+      let contribution;
+      sale.Contribution(a)
+      .then((_contribution) => {
+        contribution = _contribution.toNumber();
+        // Determine how many GRIDs should be awarded
+        return sale.Reward(a)
+      })
+      .then((_reward) => {
+        reward = _reward.toNumber();
+        assert.equal(reward, contribution*rf, "Got wrong reward")
+        // Claim that reward
+        return sale.Withdraw(a)
+      })
+      .then((hash) => {
+        return grid_contract.balanceOf(a)
+      })
+      .then((balance) => {
+        assert.equal(balance.toNumber(), reward, "Did not receive GRIDs.");
+        resolve(true);
+      })
     })
-    .then((hash) => {
-      return grid_contract.balanceOf(a.address)
+  }
+
+  function somethingUseless(n) {
+    return new Promise((resolve, reject) => {
+      let arr = Array.from(new Array(n),(val,index)=>index);
+      Promise.all(
+        arr
+        .map((i) => {
+          web3.eth.sendTransaction({ value: 1, from: accounts[0] })
+        })
+      )
+      .then(() => { resolve(true); })
+      .catch((err) => { reject(err); })
     })
-    .then((balance) => {
-      assert.equal(balance, reward, "Did not receive GRIDs.");
-      resolve(true);
-    })
-  })
-}
+  }
+
+})
