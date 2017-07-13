@@ -33,20 +33,24 @@ let rf;
 //====================================
 
 // Number of total accounts
-const N_ACCT = 6;
+const N_ACCT_1 = 6;
+const N_ACCT_2 = 10;
 
 // Number of accounts designed to be excluded (i.e. fail to contribute)
 // These always come AFTER the sale has ended (i.e. that is the souce of their failure)
-const N_FAIL = 1;
+const N_FAIL_1 = 1;
+const N_FAIL_2 = 0;
 
 // Number of presale participants
-const N_PRESALE = 0;
+const N_PRESALE_1 = 0;
+const N_PRESALE_2 = 2;
 
 // Block that the last participant partcipated on
 let last_sale_block;
 
+
 //====================================
-// TESTS
+// SIMLUATION 1
 //====================================
 
 contract('TokenSale', function(accounts) {
@@ -172,7 +176,7 @@ contract('TokenSale', function(accounts) {
   })
 
   it('Should contribute 0.1 eth from 5 accounts', function(done) {
-    contribute(sale, accounts.slice(0, 5))
+    contribute(sale, accounts.slice(0, N_ACCT_1-N_FAIL_1))
     .then((txhash) => {
       last_sale_block = config.web3.eth.blockNumber;
       done();
@@ -216,15 +220,226 @@ contract('TokenSale', function(accounts) {
   it('Should claim GRID tokens', function(done) {
     this.timeout(60000)
     Promise.all(
-      accounts.slice(0, N_ACCT-N_FAIL)
+      accounts.slice(0, N_ACCT_1-N_FAIL_1)
       .map((a) => {
         check(sale, a)
       })
     )
     .then(() => { done(); })
+  })
+
+
+  //====================================
+  // SIMLUATION 2
+  //====================================
+
+  it('Should deploy GRID and get its address', function() {
+    return GRID.new(grid_supply, "GRID Token", 18, "GRID", "1")
+    .then((instance) => {
+      assert.notEqual(instance.address, null);
+      grid_contract = instance;
+      return instance.supply()
+    })
+    .then((supply) => {
+      assert.equal(supply.toNumber(), grid_supply, "Wrong supply")
+    })
+  })
+
+  it('Should check my GRID balance', function() {
+    grid_contract.balanceOf(accounts[0])
+    .then((balance) => {
+      assert.equal(balance.toNumber(), grid_supply)
+      tmp = balance;
+    })
+  })
+
+  it('Should deploy TokenSale contract and get its address', function() {
+    return TokenSale.new(grid_contract.address)
+    .then(function(instance) {
+      assert.notEqual(instance.address, null);
+      sale = instance;
+      return instance.GRID()
+    })
+    .then((_addr) => {
+      assert.notEqual(_addr, "0x0000000000000000000000000000000000000000")
+    })
+  });
+
+  it('Should send the token sale some GRID.', function(done) {
+    grid_contract.transfer(sale.address, grid_supply)
+    .then(() => {
+      return grid_contract.balanceOf(sale.address);
+    })
+    .then((balance) => {
+      assert.equal(balance.toNumber(), grid_supply);
+      done();
+    })
+  })
+
+  it('Should setup the token sale simulation.', function() {
+    // There are several tx that happen after setting this
+    Rmax = 960;
+    start_block = config.web3.eth.blockNumber + 10;
+    let L = 50;
+    let cap = 0.5 * Math.pow(10, 18);
+    y_int_denom = 5;
+    m_denom = 50000;
+    sale.SetupSale(Rmax, cap, start_block, L, y_int_denom, m_denom)
+  })
+
+  it('Should set the spot rate of the first sale', function() {
+    let C = 200;
+    sale.SetPrice(C)
+  })
+
+  it('Should fail to set the spot rate of the first sale a second time', function() {
+    let C = 300;
+    sale.SetPrice(C)
+    .then(() => {})
+    .catch((err) => { assert.notEqual(err, null); })
+  })
+
+  it('Should get the starting block, ending block, and cap', function(done) {
+    let current_block;
+    let desired_block;
+    sale.start()
+    .then((start) => {
+      current_block = config.web3.eth.blockNumber;
+      desired_block = parseInt(start);
+      // Make sure the chain is caught up
+      let blocks_needed = desired_block - current_block;
+      assert.isAtLeast(blocks_needed, 0, 'Uh oh, you need to set your start block higher.')
+      return sale.end()
+    })
+    .then((end) => {
+      end_block = parseInt(end)
+      done()
+    })
+  })
+
+  it('Should make sure the auction has enough GRID', function(done) {
+    grid_contract.balanceOf(sale.address)
+    .then((balance) => {
+      assert.equal(balance.toNumber(), grid_supply)
+      done();
+    })
+  })
+
+  it('Should whitelist accouts 1 and 2 to participate in the pre-sale', function(done) {
+    Promise.all(
+      accounts.slice(0, N_PRESALE_2)
+      .map((a) => {
+        whitelistPresale(sale, a)
+      })
+    )
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should make sure the sale has not started yet', function(done) {
+    let b = config.web3.eth.blockNumber;
+    assert.isAtMost(b+N_PRESALE_2, start_block);
+    done();
 
   })
 
+  it('Should let the presalers contribute', function(done) {
+    contribute(sale, accounts.slice(0, N_PRESALE_2))
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+
+  // Had to make sure pre-salers got in 1 block before the start, per Sale.sol
+  it('Should run blocks up to the start block, beginning the regular sale', function(done) {
+    let current_block = config.web3.eth.blockNumber;
+    // Make sure the chain is caught up
+    let blocks_needed = start_block - current_block;
+    somethingUseless(blocks_needed)
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should make sure the sale starts this block', function(done) {
+    let b = config.web3.eth.blockNumber;
+    assert.equal(b, start_block, "Start block has not been reached")
+    done();
+  })
+
+  it(`Should contribute 0.1 eth from ${N_ACCT_2-N_PRESALE_2} accounts`, function(done) {
+    contribute(sale, accounts.slice(N_PRESALE_2, N_ACCT_2))
+    .then((txhash) => {
+      last_sale_block = config.web3.eth.blockNumber;
+      done();
+    })
+    .catch((err) => { assert.equal(err, null, err) })
+  })
+
+  it('Should run blocks up to the start block, beginning the regular sale', function(done) {
+    let current_block = config.web3.eth.blockNumber;
+    // Make sure the chain is caught up
+    let blocks_needed = end_block - current_block;
+    somethingUseless(blocks_needed)
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should make sure the sale starts this block', function(done) {
+    let b = config.web3.eth.blockNumber;
+    assert.equal(b, end_block, "Start block has not been reached")
+    done();
+  })
+
+  it('Should get the final sale price', function(done) {
+    sale.Rf()
+    .then((Rf) => {
+    let elapsed = last_sale_block - start_block;
+      let expected_rf = Math.floor(Rmax/y_int_denom) + Math.floor((elapsed*Rmax)/m_denom);
+      assert.equal(parseInt(Rf), expected_rf)
+      rf = parseInt(Rf);
+      done();
+    })
+  })
+
+  it('Should claim GRID tokens for presalers', function(done) {
+    this.timeout(60000)
+    Promise.all(
+      accounts.slice(0, N_PRESALE_2)
+      .map((a) => {
+        check(sale, a, true)
+      })
+    )
+    .then(() => { done(); })
+  })
+
+  it('Should claim GRID tokens for regular sale', function(done) {
+    this.timeout(60000)
+    Promise.all(
+      accounts.slice(N_PRESALE_2, N_ACCT_2)
+      .map((a) => {
+        check(sale, a, false)
+      })
+    )
+    .then(() => { done(); })
+  })
+
+  //====================================
+  // UTILITY FUNCTIONS IN THE TRUFFLE SCOPE
+  //====================================
+
+  function whitelistPresale(sale, a) {
+    return new Promise((resolve, reject) => {
+      sale.WhitelistPresale(a)
+      .then(() => {
+        return sale.IsPresaler(a)
+      })
+      .then((is_presaler) => {
+        assert.equal(is_presaler, true, `${a} is not whitelisted`)
+        resolve(true);
+      })
+      .catch((err) => { reject(err); })
+    })
+  }
 
   function contribute(sale, accts) {
     return new Promise((resolve, reject) => {
@@ -241,7 +456,7 @@ contract('TokenSale', function(accounts) {
   }
 
 
-  function check(sale, a) {
+  function check(sale, a, is_presaler) {
     return new Promise((resolve, reject) => {
       let reward;
       let balance;
@@ -254,7 +469,8 @@ contract('TokenSale', function(accounts) {
       })
       .then((_reward) => {
         reward = _reward.toNumber();
-        assert.equal(reward, contribution*rf, "Got wrong reward")
+        let expected = is_presaler ? 1.15*contribution*rf : contribution*rf;
+        assert.equal(reward, expected, "Got wrong reward")
         // Claim that reward
         return sale.Withdraw(a)
       })

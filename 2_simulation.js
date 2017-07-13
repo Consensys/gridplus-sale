@@ -37,15 +37,6 @@ const N_FAIL = 0;
 // Number of presale participants
 const N_PRESALE = 2;
 
-// Each pre-saler gets white listed and then contributes
-// This accounts for a total of two transactions/blocks per presaler
-const START_WAIT = 2*N_PRESALE;
-
-// Number of transactions to occur while the sale is underway
-const N_TXN = N_ACCT - N_FAIL - N_PRESALE;
-
-// Number of transactions after the end_block of the sale
-const POST_SALE_TXN = 5;
 
 //====================================
 // TESTS
@@ -119,8 +110,8 @@ contract('TokenSale', function(accounts) {
   it('Should setup the token sale simulation.', function() {
     // There are several tx that happen after setting this
     Rmax = 960;
-    start_block = config.web3.eth.blockNumber + N_ACCT + START_WAIT + 4;
-    let L = N_TXN;
+    start_block = config.web3.eth.blockNumber + 4;
+    let L = 50;
     let cap = 0.5 * Math.pow(10, 18);
     let y_int_denom = 5;
     let m_denom = 50000;
@@ -139,35 +130,26 @@ contract('TokenSale', function(accounts) {
     .catch((err) => { assert.notEqual(err, null); })
   })
 
-  it(`Should create ${N_ACCT} accounts`, function(done) {
-    this.timeout(5000)
-    util.createAccounts(N_ACCT)
-    .then((_accounts) => {
-      accounts = _accounts;
-      assert.equal(accounts.length, N_ACCT);
-      done();
-    })
-  })
-
-  it('Should send a faucet request from each account', function(done) {
-    this.timeout(10000);
-    util.FaucetAccounts(accounts)
-    .then((success) => { return Promise.delay(1000); })
-    .then(() => { done(); })
-  })
-
   it('Should get the starting block, ending block, and cap', function(done) {
-    let current_block = config.web3.eth.blockNumber;
+    let current_block;
+    let desired_block;
     sale.start()
     .then((start) => {
-      // The 1 is to make sure pre-salers got in 1 block before the start, per Sale.sol
-      let calc_start = current_block + START_WAIT + 1;
-      assert.equal(calc_start, parseInt(start), `Sale should begin on ${parseInt(start)} but it is ${calc_start} right now.`)
+      current_block = config.web3.eth.blockNumber;
+      desired_block = parseInt(start);
+      // Make sure the chain is caught up
+      let blocks_needed = desired_block - current_block;
+      assert.isAtLeast(blocks_needed, 0, 'Uh oh, you need to set your start block higher.')
+      return somethingUseless(blocks_needed)
+    })
+    .then(() => {
+      current_block = config.web3.eth.blockNumber;
+      assert.equal(current_block, desired_block, `Sale should begin on ${parseInt(desired_block)} but it is ${current_block} right now.`)
       return sale.end()
     })
     .then((end) => {
-      assert.equal(current_block+START_WAIT+N_TXN+1, parseInt(end), `Sale should end on ${parseInt(end)}.`);
-      done();
+      end_block = parseInt(end)
+      done()
     })
   })
 
@@ -188,7 +170,7 @@ contract('TokenSale', function(accounts) {
     )
     .then(() => { done(); })
   })
-
+/*
   it('Should let the presalers contribute', function(done) {
     Promise.resolve(accounts.slice(0, N_PRESALE))
     .map((a) => {
@@ -255,7 +237,7 @@ contract('TokenSale', function(accounts) {
     )
     .then(() => { done(); })
   })
-
+*/
   function whitelistPresale(sale, a) {
     return new Promise((resolve, reject) => {
       sale.WhitelistPresale(a.address)
