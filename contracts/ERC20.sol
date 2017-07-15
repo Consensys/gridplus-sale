@@ -16,4 +16,7 @@ contract ERC20 {
     function transfer( address to, uint value) returns (bool ok);
     function transferFrom( address from, address to, uint value) returns (bool ok);
     function approve(address spender, uint value) returns (bool ok);
+
+    // Extension
+    function provable_redemption(bytes32[3] data, uint256 value) returns (bool ok);
 }

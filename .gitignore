@@ -1,5 +1,7 @@
+scTopics
 coverage.json
 coverage
+coverageEnv
 package-lock.json
 .node*
 build

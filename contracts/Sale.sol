@@ -267,7 +267,7 @@ contract Sale {
     else {
       uint to_refund = wei_sent[user];
       wei_sent[user] = 0;
-      user.call.gas(21000).value(to_refund);
+      if (!user.send(to_refund)) { throw; }
     }
   }
 

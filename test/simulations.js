@@ -472,6 +472,178 @@ contract('TokenSale', function(accounts) {
     .catch((err) => { assert.equal(err, null, err); })
   })
 
+
+  //====================================
+  // SIMULATION 3
+  //====================================
+  it('Should send the admin a bunch of ether.', function() {
+    var eth = 5*Math.pow(10, 18);
+    var sendObj = { from: accounts[0], to: config.setup.admin_addr, value: eth }
+    Promise.resolve(web3.eth.sendTransaction(sendObj))
+    .then(function(txHash) {
+      assert.notEqual(txHash, null);
+      return Promise.delay(config.constants.block_time)
+    })
+    .then(() => {
+      return web3.eth.getBalance(config.setup.admin_addr)
+    })
+    .then(function(balance) {
+      assert.notEqual(0, parseInt(balance), "User still has a zero balance.")
+      // get the net version
+      var version = web3.version.network;
+    })
+  })
+
+  it('Should deploy GRID and get its address', function() {
+    return GRID.new(grid_supply, "GRID Token", 18, "GRID", "1")
+    .then((instance) => {
+      assert.notEqual(instance.address, null);
+      grid_contract = instance;
+      return instance.supply()
+    })
+    .then((supply) => {
+      assert.equal(supply.toNumber(), grid_supply, "Wrong supply")
+    })
+  })
+
+  it('Should check my GRID balance', function() {
+    grid_contract.balanceOf(accounts[0])
+    .then((balance) => {
+      assert.equal(balance.toNumber(), grid_supply)
+      tmp = balance;
+    })
+  })
+
+  it('Should deploy TokenSale contract and get its address', function() {
+    return TokenSale.new(grid_contract.address)
+    .then(function(instance) {
+      assert.notEqual(instance.address, null);
+      sale = instance;
+      return instance.GRID()
+    })
+    .then((_addr) => {
+      assert.notEqual(_addr, "0x0000000000000000000000000000000000000000")
+    })
+  });
+
+  it('Should send the token sale some GRID.', function(done) {
+    grid_contract.transfer(sale.address, grid_supply)
+    .then(() => {
+      return grid_contract.balanceOf(sale.address);
+    })
+    .then((balance) => {
+      assert.equal(balance.toNumber(), grid_supply);
+      done();
+    })
+  })
+
+  it('Should setup the token sale simulation.', function() {
+    // There are several tx that happen after setting this
+    Rmax = 960;
+    start_block = config.web3.eth.blockNumber + 3;
+    let L = 15;
+    let cap = 0.5 * Math.pow(10, 18);
+    y_int_denom = 5;
+    m_denom = 50000;
+    sale.SetupSale(Rmax, cap, start_block, L, y_int_denom, m_denom)
+  })
+
+  it('Should set the spot rate of the first sale', function() {
+    let C = 200;
+    sale.SetPrice(C)
+  })
+
+  it('Should fail to set the spot rate of the first sale a second time', function() {
+    let C = 300;
+    sale.SetPrice(C)
+    .then(() => {})
+    .catch((err) => { assert.notEqual(err, null); })
+  })
+
+  it('Should get the starting block, ending block, and cap', function(done) {
+    let current_block;
+    let desired_block;
+    sale.start()
+    .then((start) => {
+      current_block = config.web3.eth.blockNumber;
+      desired_block = parseInt(start);
+      // Make sure the chain is caught up
+      let blocks_needed = desired_block - current_block;
+      assert.isAtLeast(blocks_needed, 0, 'Uh oh, you need to set your start block higher.')
+      return somethingUseless(blocks_needed)
+    })
+    .then(() => {
+      current_block = config.web3.eth.blockNumber;
+      assert.equal(current_block, desired_block, `Sale should begin on ${parseInt(desired_block)} but it is ${current_block} right now.`)
+      return sale.end()
+    })
+    .then((end) => {
+      end_block = parseInt(end)
+      done()
+    })
+  })
+
+  it('Should make sure the auction has enough GRID', function(done) {
+    let current_block = config.web3.eth.blockNumber;
+    grid_contract.balanceOf(sale.address)
+    .then((balance) => {
+      assert.equal(balance.toNumber(), grid_supply)
+      done();
+    })
+  })
+
+  it('Should contribute 0.1 eth from 1 account', function(done) {
+    contribute(sale, [accounts[0]])
+    .then((txhash) => {
+      last_sale_block = config.web3.eth.blockNumber;
+      done();
+    })
+    .catch((err) => { assert.equal(err, null, err) })
+  })
+
+  it('Should open the escape hatch and end the sale', function(done) {
+    sale.Escape()
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should make sure the sale has the right amount of ether', function(done) {
+    let bal = web3.eth.getBalance(sale.address).toNumber();
+    assert.equal(bal, amt, 'Sale has the wrong amount of ether')
+    done();
+  })
+
+  let init_balance;
+  it('Should get the balance of the contributor', function(done) {
+    init_balance = web3.eth.getBalance(accounts[0])
+    done();
+  })
+
+  it('Should fail to contribute', function(done) {
+    contribute(sale, [accounts[1]])
+    .then((txhash) => {
+      assert.equal(1, 0, 'Should have failed to contribute')
+    })
+    .catch((err) => { assert.equal(1,1); done(); })
+  })
+
+  it('Should get a refund for the contributor', function(done) {
+    sale.Abort(accounts[0])
+    .then((txhash) => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+/*
+  it('Should verify that there is no ether in the sale contract', function(done) {
+    let sale_balance = web3.eth.getBalance(sale.address).toNumber();
+    assert.equal(sale_balance, 0, 'Sale still has ether');
+  })
+
+  it('Should verify that the user was refunded', function(done) {
+    let user_balance = web3.eth.getBalance(accounts[0]);
+    assert.equal(init_balance.plus(amt), user_balance, 'User was not refunded')
+  })
+*/
+
   //====================================
   // UTILITY FUNCTIONS IN THE TRUFFLE SCOPE
   //====================================

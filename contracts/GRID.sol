@@ -3,6 +3,8 @@ pragma solidity ^0.4.8;
 import "./ERC20.sol";
 
 contract GRID is ERC20 {
+  mapping(address => mapping(bytes32 => bool)) played;
+  mapping(address => uint) nonces;
 
   //============================================================================
   // ERC20
@@ -56,6 +58,32 @@ contract GRID is ERC20 {
 
   function allowance(address owner, address spender) constant returns (uint) {
     return approvals[owner][spender];
+  }
+
+  //============================================================================
+  // PROVABLE FUNCTIONS
+  //============================================================================
+
+  function provable_redemption(bytes32[3] data, uint256 value) returns (bool) {
+   // ABI definition of this function
+    bytes32 word = 0x5ac232f4;
+    address signer = ecrecover(msg, uint8(data[2]), data[0], data[1]);
+    uint nonce = nonces[signer];
+    bytes32 msg = sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
+
+    // Replay protection
+    if (played[signer][msg] == true) { return false; }
+
+    // Update state variables
+    played[signer][msg] = true;
+    nonces[signer] += 1;
+
+    // Redeem
+    balances[signer] = safeSub(balances[signer], value);
+    supply = safeSub(supply, value);
+    Transfer(signer, 0, value);
+
+    return true;
   }
 
   //============================================================================
