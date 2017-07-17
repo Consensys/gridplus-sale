@@ -196,6 +196,19 @@ contract('TokenSale', function(accounts) {
     })
   })
 
+  it('Should fail to withdraw GRID while sale is ongoing', function(done) {
+    sale.MoveGRID(accounts[0], { from: accounts[1]})
+    .then(() => { assert.equal(1, 0, "Should have failed"); })
+    .catch((err) => { done(); })
+  })
+
+  it('Should fail to withdraw ether while the sale is ongoing', function(done) {
+    sale.MoveFunds(accounts[0], { from: accounts[1]})
+    .then(() => { assert.equal(1, 0, "Should have failed"); })
+    .catch((err) => { done(); })
+  })
+
+
   it('Should contribute 0.1 eth from 5 accounts', function(done) {
     contribute(sale, accounts.slice(0, N_ACCT_1-N_FAIL_1))
     .then((txhash) => {
@@ -255,22 +268,10 @@ contract('TokenSale', function(accounts) {
     })
   })
 
-  it('Should fail to withdraw reamining GRID by non-admin', function(done) {
-    sale.MoveGRID(accounts[0])
-    .then(() => { assert.equal(1, 0, "Should have failed"); })
-    .catch((err) => { done(); })
-  })
-
   it('Should withdraw remaining GRID', function(done) {
     sale.MoveGRID(accounts[0], { from: accounts[1] })
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
-  })
-
-  it('Should fail to withdraw ether by non-admin', function(done) {
-    sale.MoveFunds(accounts[0])
-    .then(() => { assert.equal(1, 0, "Should have failed"); })
-    .catch((err) => { done(); })
   })
 
   it('Should withdraw ether', function(done) {
