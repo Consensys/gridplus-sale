@@ -64,26 +64,34 @@ contract GRID is ERC20 {
   // PROVABLE FUNCTIONS
   //============================================================================
 
-  function provable_redemption(bytes32[3] data, uint256 value) returns (bool) {
+  // sig[1]    r of signature
+  // sig[2]    s of signature
+  // sig[3]    v of signature
+  function provable_redemption(bytes32[3] sig, uint256 value) returns (bool) {
    // ABI definition of this function
     bytes32 word = 0x5ac232f4;
-    address signer = ecrecover(msg, uint8(data[2]), data[0], data[1]);
     uint nonce = nonces[signer];
-    bytes32 msg = sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
+    bytes32 _msg = sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
+    address signer = ecrecover(_msg, uint8(sig[2]), sig[0], sig[1]);
+
 
     // Replay protection
-    if (played[signer][msg] == true) { return false; }
+    //if (played[signer][msg] == true) { return false; }
 
     // Update state variables
-    played[signer][msg] = true;
+    played[signer][_msg] = true;
     nonces[signer] += 1;
 
     // Redeem
-    balances[signer] = safeSub(balances[signer], value);
-    supply = safeSub(supply, value);
-    Transfer(signer, 0, value);
+    balances[signer] = safeSub(balances[signer], 1);
+    supply = safeSub(supply, 1);
+    Transfer(signer, 0, 1);
 
     return true;
+  }
+
+  function get_nonce(address user) public constant returns (uint) {
+    return nonces[user];
   }
 
   //============================================================================

@@ -138,24 +138,17 @@ function callFaucet(to, from, pkey, amt) {
 }
 
 // Get the message to sign and send to provableBurn
-exports.getBurnMessage = function(value, contract, user) {
-  return new Promise((resolve, reject) => {
-    // First 4 bytes of Keccak-256 hash of "burn(bytes32[3],uint256)"
-    let word = "0x066bbd48";
-    // Get the nonce of this user
-    let data = `0x2d0335ab${zfill(user)}`
-    // Message
-    call(contract, data)
-    .then((nonce) => {
-      // I am combining all stringified arguments into one because I was having
-      // trouble with solidity-sha3
-      let arg_a = `${sha3(value)}${word.substr(2, word.length)}${contract.substr(2, contract.length)}`
-      let arg_b = parseInt(nonce);
-      let msg = sha3(arg_a, arg_b)
-      resolve(msg)
-    })
-    .catch((err) => { reject(err); })
-  })
+exports.redemption_msg = function(value, contract, nonce) {
+  // "provable_redemption(bytes32[3],uint256)"
+  let word = "0x5ac232f4";
+  // Message
+  // I am combining all stringified arguments into one because I was having
+  // trouble with solidity-sha3
+  let arg_a = `${sha3(value)}${word.substr(2, word.length)}${contract.substr(2, contract.length)}`
+  let arg_b = nonce;
+  console.log('arg_a', arg_a, 'arg_b', arg_b)
+  let msg = sha3(arg_a, arg_b)
+  return msg;
 }
 
 // Sign a message and return it with the signature

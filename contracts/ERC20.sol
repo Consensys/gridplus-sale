@@ -4,7 +4,8 @@ pragma solidity ^0.4.8;
 contract ERC20 {
 
     // Events
-    event Transfer(address indexed from, address indexed to, uint value);
+    //event Transfer(address indexed from, address indexed to, uint value);
+    event Transfer(address from, address indexed to, uint value);
     event Approval( address indexed owner, address indexed spender, uint value);
 
     // Stateless functions
