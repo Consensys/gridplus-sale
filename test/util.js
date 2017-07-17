@@ -144,10 +144,11 @@ exports.redemption_msg = function(value, contract, nonce) {
   // Message
   // I am combining all stringified arguments into one because I was having
   // trouble with solidity-sha3
-  let arg_a = `${sha3(value)}${word.substr(2, word.length)}${contract.substr(2, contract.length)}`
-  let arg_b = nonce;
-  console.log('arg_a', arg_a, 'arg_b', arg_b)
-  let msg = sha3(arg_a, arg_b)
+  // let arg_a = `${sha3(value)}${word.substr(2, word.length)}${contract.substr(2, contract.length)}`
+  // let arg_b = nonce;
+  // console.log('arg_a', arg_a, 'arg_b', arg_b)
+  // let msg = sha3(arg_a, arg_b)
+  let msg = sha3(1);
   return msg;
 }
 

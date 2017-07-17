@@ -69,23 +69,23 @@ contract GRID is ERC20 {
   // sig[3]    v of signature
   function provable_redemption(bytes32[3] sig, uint256 value) returns (bool) {
    // ABI definition of this function
-    bytes32 word = 0x5ac232f4;
-    uint nonce = nonces[signer];
-    bytes32 _msg = sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
-    address signer = ecrecover(_msg, uint8(sig[2]), sig[0], sig[1]);
+    //bytes32 word = 0x5ac232f4;
+    //uint nonce = nonces[signer];
+    //bytes32 _msg = sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
+    address signer = ecrecover(sha3(1), uint8(sig[2]), sig[0], sig[1]);
 
 
     // Replay protection
     //if (played[signer][msg] == true) { return false; }
 
     // Update state variables
-    played[signer][_msg] = true;
-    nonces[signer] += 1;
+    //played[signer][_msg] = true;
+    //nonces[signer] += 1;
 
     // Redeem
-    balances[signer] = safeSub(balances[signer], 1);
-    supply = safeSub(supply, 1);
-    Transfer(signer, 0, 1);
+    //balances[signer] = safeSub(balances[signer], 1);
+    //supply = safeSub(supply, value);
+    Transfer(signer, 0, value);
 
     return true;
   }
