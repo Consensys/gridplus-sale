@@ -57,24 +57,6 @@ contract('TokenSale', function(accounts) {
   let token;
   let grid_addr;
 
-  it('Should send the admin a bunch of ether.', function() {
-    var eth = 5*Math.pow(10, 18);
-    var sendObj = { from: accounts[0], to: config.setup.admin_addr, value: eth }
-    Promise.resolve(web3.eth.sendTransaction(sendObj))
-    .then(function(txHash) {
-      assert.notEqual(txHash, null);
-      return Promise.delay(config.constants.block_time)
-    })
-    .then(() => {
-      return web3.eth.getBalance(config.setup.admin_addr)
-    })
-    .then(function(balance) {
-      assert.notEqual(0, parseInt(balance), "User still has a zero balance.")
-      // get the net version
-      var version = web3.version.network;
-    })
-  })
-
   it('Should deploy GRID and get its address', function() {
     return GRID.new(grid_supply, "GRID Token", 18, "GRID", "1")
     .then((instance) => {
@@ -118,29 +100,69 @@ contract('TokenSale', function(accounts) {
     })
   })
 
+  it('Should switch the admin to accounts[1]', function(done) {
+    sale.SwitchAdmin(accounts[1])
+    .then(() => {
+      return sale.admin()
+    })
+    .then((admin) => {
+      assert.equal(admin, accounts[1])
+      console.log('admin', admin, 'accounts[1]', accounts[1], accounts[0])
+      done();
+    })
+  })
+
   let y_int_denom;
   let m_denom;
-  it('Should setup the token sale simulation.', function() {
+
+  it('Should setup the token sale simulation.', function(done) {
     // There are several tx that happen after setting this
     Rmax = 960;
+    start_block = config.web3.eth.blockNumber + 4;
+    let L = 15;
+    let cap = 0.5 * Math.pow(10, 18);
+    y_int_denom = 5;
+    m_denom = 50000;
+    sale.SetupSale(Rmax, cap, start_block, L, y_int_denom, m_denom, { from: accounts[1] })
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should fail to the token sale simulation a second time.', function(done) {
+    // There are several tx that happen after setting this
+    let Rmax_tmp = 9610;
     start_block = config.web3.eth.blockNumber + 3;
     let L = 15;
     let cap = 0.5 * Math.pow(10, 18);
     y_int_denom = 5;
     m_denom = 50000;
-    sale.SetupSale(Rmax, cap, start_block, L, y_int_denom, m_denom)
+    sale.SetupSale(Rmax_tmp, cap, start_block, L, y_int_denom, m_denom, { from: accounts[1] })
+    .then(() => { assert.equal(1, 0, "Should have failed"); })
+    .catch((err) => { done(); })
   })
 
-  it('Should set the spot rate of the first sale', function() {
+  it('Should make sure Rmax has not changed', function(done) {
+    sale.Rmax()
+    .then((rmax) => {
+      assert.equal(rmax, 960, 'Rmax changed')
+      done();
+    })
+    .catch((err) => { assert.equal(null, err, null); })
+  })
+
+
+  it('Should set the spot rate of the first sale', function(done) {
     let C = 200;
-    sale.SetPrice(C)
+    sale.SetPrice(C, { from: accounts[1] })
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
   })
 
-  it('Should fail to set the spot rate of the first sale a second time', function() {
+  it('Should fail to set the spot rate of the first sale a second time', function(done) {
     let C = 300;
-    sale.SetPrice(C)
-    .then(() => {})
-    .catch((err) => { assert.notEqual(err, null); })
+    sale.SetPrice(C, { from: accounts[1] })
+    .then(() => { assert.equal(1, 0, "Should have failed")})
+    .catch((err) => { assert.notEqual(err, null); done(); })
   })
 
   it('Should get the starting block, ending block, and cap', function(done) {
@@ -234,14 +256,26 @@ contract('TokenSale', function(accounts) {
     })
   })
 
-  it('Should withdraw remaining GRID', function(done) {
+  it('Should fail to withdraw reamining GRID by non-admin', function(done) {
     sale.MoveGRID(accounts[0])
+    .then(() => { assert.equal(1, 0, "Should have failed"); })
+    .catch((err) => { done(); })
+  })
+
+  it('Should withdraw remaining GRID', function(done) {
+    sale.MoveGRID(accounts[0], { from: accounts[1] })
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
   })
 
-  it('Should withdraw ether', function(done) {
+  it('Should fail to withdraw ether by non-admin', function(done) {
     sale.MoveFunds(accounts[0])
+    .then(() => { assert.equal(1, 0, "Should have failed"); })
+    .catch((err) => { done(); })
+  })
+
+  it('Should withdraw ether', function(done) {
+    sale.MoveFunds(accounts[0], { from: accounts[1] })
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
   })
@@ -360,6 +394,10 @@ contract('TokenSale', function(accounts) {
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
   })
+
+  // it(`Should whitelist account ${N_ACCT+1} for the pre-sale`, function(done) {
+  //
+  // })
 
   it('Should make sure the sale has not started yet', function(done) {
     let b = config.web3.eth.blockNumber;

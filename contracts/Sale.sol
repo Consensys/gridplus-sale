@@ -9,7 +9,7 @@ contract Sale {
   event _Boot(address indexed user, uint time);
   event _Withdraw(address indexed user, uint value, uint time);
 
-  address private admin;
+  address public admin;
   address public GRID;
   mapping (address => uint) wei_sent;      // Amounts of wei sent
   mapping (address => bool) presale;       // Whitelisted presale participants
@@ -73,10 +73,6 @@ contract Sale {
       _Withdraw(user, amt, now);
     }
   }
-
-  /*function foo(address user) {
-    wei_remaining = safeSub(wei_remaining, wei_sent[user]);
-  }*/
 
   function GetUserReward(address user) returns (uint) {
     // Calculate the amount of GRID to send the contributor
