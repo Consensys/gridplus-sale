@@ -1,5 +1,5 @@
 // Token sale contract
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.6;
 import "./ERC20.sol";
 
 contract Sale {
@@ -122,13 +122,16 @@ contract Sale {
   }
 
   // If we want to kick a presaler out for some reason
-  function VentPresale(address user) onlyAdmin() {
+  function VentPresale(address user) onlyAdmin() payable {
     uint amount = wei_sent[user];
-    wei_sent[user] = 0;
-    wei_remaining = safeSub(wei_remaining, amount);
-    user.call.gas(21000).value(amount);
-    presale[user] = false;
-    _Boot(user, now);
+    if (amount > 0) {
+      wei_sent[user] = 0;
+      wei_remaining = safeSub(wei_remaining, amount);
+      user.transfer(amount);
+      //user.transfer(10000000000);
+      presale[user] = false;
+      _Boot(user, now);
+    }
   }
 
   //============================================================================

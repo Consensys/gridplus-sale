@@ -107,7 +107,6 @@ contract('TokenSale', function(accounts) {
     })
     .then((admin) => {
       assert.equal(admin, accounts[1])
-      console.log('admin', admin, 'accounts[1]', accounts[1], accounts[0])
       done();
     })
   })
@@ -332,7 +331,7 @@ contract('TokenSale', function(accounts) {
   it('Should setup the token sale simulation.', function() {
     // There are several tx that happen after setting this
     Rmax = 960;
-    start_block = config.web3.eth.blockNumber + 10;
+    start_block = config.web3.eth.blockNumber + 12;
     let L = 50;
     let cap = 0.5 * Math.pow(10, 18);
     y_int_denom = 5;
@@ -395,9 +394,11 @@ contract('TokenSale', function(accounts) {
     .catch((err) => { assert.equal(err, null, err); })
   })
 
-  // it(`Should whitelist account ${N_ACCT+1} for the pre-sale`, function(done) {
-  //
-  // })
+  it(`Should whitelist account ${N_ACCT_2+1} for the pre-sale`, function(done) {
+    whitelistPresale(sale, accounts[N_ACCT_2+1])
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
 
   it('Should make sure the sale has not started yet', function(done) {
     let b = config.web3.eth.blockNumber;
@@ -407,11 +408,43 @@ contract('TokenSale', function(accounts) {
   })
 
   it('Should let the presalers contribute', function(done) {
-    contribute(sale, accounts.slice(0, N_PRESALE_2))
+    let presalers = accounts.slice(0, N_PRESALE_2);
+    presalers.push(accounts[N_ACCT_2+1])
+
+    contribute(sale, presalers)
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
   })
 
+  let pre_boot_ether;
+  let presaler_ether;
+  it('Should get the amount of ether contributed thus far', function(done) {
+    pre_boot_ether = web3.eth.getBalance(sale.address);
+    done();
+  })
+
+  it('Should get the presalers ether', function(done) {
+    presaler_ether = web3.eth.getBalance(accounts[N_ACCT_2+1])
+    done();
+  })
+
+  it('Should boot the last presaler', function(done) {
+    sale.VentPresale(accounts[N_ACCT_2+1])
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should make sure ether was returned to the pre-saler', function(done) {
+    let tmp = web3.eth.getBalance(accounts[N_ACCT_2+1])
+    assert.equal(tmp.sub(presaler_ether).toNumber(), amt, 'Ether not returned to booted presaler')
+    done();
+  })
+
+  it('Should make sure the sale returned the ether', function(done) {
+    let tmp = web3.eth.getBalance(sale.address);
+    assert.equal(pre_boot_ether.sub(tmp).toNumber(), amt, 'Ether not returned from sale')
+    done();
+  })
 
   // Had to make sure pre-salers got in 1 block before the start, per Sale.sol
   it('Should run blocks up to the start block, beginning the regular sale', function(done) {
