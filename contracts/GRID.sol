@@ -3,6 +3,7 @@ pragma solidity ^0.4.8;
 import "./ERC20.sol";
 
 contract GRID is ERC20 {
+  uint public initial_supply;
   mapping(address => mapping(bytes32 => bool)) played;
   mapping(address => uint) nonces;
 
@@ -21,6 +22,7 @@ contract GRID is ERC20 {
   function GRID( uint _supply, string _name, uint8 _decimals, string _symbol, string _version ) {
     balances[msg.sender] = _supply;
     supply = _supply;
+    initial_supply = _supply;
     name = _name;
     decimals = _decimals;
     symbol = _symbol;

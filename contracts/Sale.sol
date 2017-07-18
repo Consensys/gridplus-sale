@@ -16,8 +16,7 @@ contract Sale {
   uint public wei_remaining;               // Amount of wei belonging to participants who have not received GRID
   uint public start;                       // Starting block
   uint public end;                         // Ending block
-  uint public cap;                         // Cap on the total USD to raise (converted to wei before the sale)
-  bool public cap_set;                     // True if the USD cap has been converted to wei
+  uint public cap;                         // Cap in wei
   uint public Rmax;                        // Maximum reward (qGRID/WEI), multiple of 5
   uint public Rf;                          // Final reward (qGRID/WEI)
   bool private hatch_open;                 // Escape hatch
@@ -45,7 +44,7 @@ contract Sale {
       block.number >= start && block.number <= end
       && msg.value + address(this).balance <= cap
       && presale[msg.sender] == false  // pre-salers cannot participate in the regular sale
-      && cap_set == true
+      && cap > 0
     ) {
       wei_sent[msg.sender] = safeAdd(wei_sent[msg.sender], msg.value);
       wei_remaining = safeAdd(wei_remaining, msg.value);
@@ -181,13 +180,11 @@ contract Sale {
   }
 
   // Parameterize the sale
-  function SetupSale(uint _Rmax, uint _cap, uint _start, uint length, uint _a_1, uint _a_2) onlyAdmin() {
+  function SetupSale(uint _Rmax, uint _start, uint length, uint _a_1, uint _a_2) onlyAdmin() {
     // Can only do this once
     if (start == 0) {
       a_1 = _a_1;
       a_2 = _a_2;
-      cap = _cap;
-      //cap_set = false;
       Rmax = _Rmax;  // This needs to be a multiple of 5
       start = _start;
       end = length + _start;
@@ -197,11 +194,10 @@ contract Sale {
     }
   }
 
-  // Convert the cap (in USD) to wei using a spot price. This can only happen once.
-  function SetPrice(uint spot) onlyAdmin() {
-    if (cap_set == true) { throw; }
-    cap = safeMul(cap, spot);
-    cap_set = true;
+  // Set the cap (in wei)
+  function SetCap(uint _cap) onlyAdmin() {
+    if (cap > 0) { throw; }
+    cap = _cap;
   }
 
   // GRID may only be moved once the sale is over amd all GRID have been
@@ -219,9 +215,7 @@ contract Sale {
   // Ether may only be moved once all GRID have been withdrawn.
   // This includes the amount of GRID moved by Grid+.
   function MoveFunds(address to) onlyAdmin() {
-    if (block.number > end && start > 0 && wei_remaining == 0) {
-      ERC20 grid = ERC20(GRID);
-      if (grid.balanceOf(address(this)) > 0) { throw; }
+    if (block.number > end && start > 0) {
       to.transfer(address(this).balance);
     } else {
       throw;
@@ -266,7 +260,7 @@ contract Sale {
     else {
       uint to_refund = wei_sent[user];
       wei_sent[user] = 0;
-      if (!user.send(to_refund)) { throw; }
+      user.transfer(to_refund);
     }
   }
 

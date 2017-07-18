@@ -121,10 +121,9 @@ contract('TokenSale', function(accounts) {
     Rmax = 960;
     start_block = config.web3.eth.blockNumber + 4;
     let L = 15;
-    let cap = 0.5 * Math.pow(10, 18);
     y_int_denom = 5;
     m_denom = 50000;
-    sale.SetupSale(Rmax, cap, start_block, L, y_int_denom, m_denom, { from: accounts[1] })
+    sale.SetupSale(Rmax, start_block, L, y_int_denom, m_denom, { from: accounts[1] })
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
   })
@@ -134,10 +133,9 @@ contract('TokenSale', function(accounts) {
     let Rmax_tmp = 9610;
     start_block = config.web3.eth.blockNumber + 3;
     let L = 15;
-    let cap = 0.5 * Math.pow(10, 18);
     y_int_denom = 5;
     m_denom = 50000;
-    sale.SetupSale(Rmax_tmp, cap, start_block, L, y_int_denom, m_denom, { from: accounts[1] })
+    sale.SetupSale(Rmax_tmp, start_block, L, y_int_denom, m_denom, { from: accounts[1] })
     .then(() => { assert.equal(1, 0, "Should have failed"); })
     .catch((err) => { done(); })
   })
@@ -151,19 +149,11 @@ contract('TokenSale', function(accounts) {
     .catch((err) => { assert.equal(null, err, null); })
   })
 
-
-  it('Should set the spot rate of the first sale', function(done) {
-    let C = 200;
-    sale.SetPrice(C, { from: accounts[1] })
+  it('Should set the cap', function(done) {
+    let cap = 0.5 * Math.pow(10, 18);
+    sale.SetCap(cap, { from : accounts[1] })
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
-  })
-
-  it('Should fail to set the spot rate of the first sale a second time', function(done) {
-    let C = 300;
-    sale.SetPrice(C, { from: accounts[1] })
-    .then(() => { assert.equal(1, 0, "Should have failed")})
-    .catch((err) => { assert.notEqual(err, null); done(); })
   })
 
   it('Should get the starting block, ending block, and cap', function(done) {
@@ -336,22 +326,16 @@ contract('TokenSale', function(accounts) {
     Rmax = 960;
     start_block = config.web3.eth.blockNumber + 12;
     let L = 50;
-    let cap = 0.5 * Math.pow(10, 18);
     y_int_denom = 5;
     m_denom = 50000;
-    sale.SetupSale(Rmax, cap, start_block, L, y_int_denom, m_denom)
+    sale.SetupSale(Rmax, start_block, L, y_int_denom, m_denom)
   })
 
-  it('Should set the spot rate of the first sale', function() {
-    let C = 200;
-    sale.SetPrice(C)
-  })
-
-  it('Should fail to set the spot rate of the first sale a second time', function() {
-    let C = 300;
-    sale.SetPrice(C)
-    .then(() => {})
-    .catch((err) => { assert.notEqual(err, null); })
+  it('Should set the cap', function(done) {
+    let cap = 0.5 * Math.pow(10, 18);
+    sale.SetCap(cap)
+    .then(() => { done(); })
+    .catch((err) => { assert.equal(err, null, err); })
   })
 
   it('Should get the starting block, ending block, and cap', function(done) {
@@ -585,6 +569,7 @@ contract('TokenSale', function(accounts) {
   //====================================
   // SIMULATION 3
   //====================================
+
   it('Should send the admin a bunch of ether.', function() {
     var eth = 5*Math.pow(10, 18);
     var sendObj = { from: accounts[0], to: config.setup.admin_addr, value: eth }
@@ -651,20 +636,19 @@ contract('TokenSale', function(accounts) {
     Rmax = 960;
     start_block = config.web3.eth.blockNumber + 3;
     let L = 15;
-    let cap = 0.5 * Math.pow(10, 18);
     y_int_denom = 5;
     m_denom = 50000;
-    sale.SetupSale(Rmax, cap, start_block, L, y_int_denom, m_denom)
+    sale.SetupSale(Rmax, start_block, L, y_int_denom, m_denom)
   })
 
-  it('Should set the spot rate of the first sale', function() {
-    let C = 200;
-    sale.SetPrice(C)
+  it('Should set the cap', function() {
+    let cap = 0.5 * Math.pow(10, 18);
+    sale.SetCap(cap)
   })
 
-  it('Should fail to set the spot rate of the first sale a second time', function() {
-    let C = 300;
-    sale.SetPrice(C)
+  it('Should fail to set the cap a second time', function() {
+    let cap = 0.5 * Math.pow(10, 18);
+    sale.SetCap(cap)
     .then(() => {})
     .catch((err) => { assert.notEqual(err, null); })
   })
@@ -723,9 +707,15 @@ contract('TokenSale', function(accounts) {
   })
 
   let init_balance;
+  let contribution;
+  let gas_used;
   it('Should get the balance of the contributor', function(done) {
     init_balance = web3.eth.getBalance(accounts[0])
-    done();
+    sale.Contribution(accounts[0])
+    .then((_contribution) => {
+      contribution = _contribution;
+      done();
+    })
   })
 
   it('Should fail to contribute', function(done) {
@@ -738,20 +728,26 @@ contract('TokenSale', function(accounts) {
 
   it('Should get a refund for the contributor', function(done) {
     sale.Abort(accounts[0])
-    .then((txhash) => { done(); })
+    .then((receipt) => {
+      // NOTE: Gas price on the testrpc network should be 1 wei
+      gas_used = receipt.receipt.gasUsed;
+      done();
+    })
     .catch((err) => { assert.equal(err, null, err); })
   })
-/*
+
   it('Should verify that there is no ether in the sale contract', function(done) {
     let sale_balance = web3.eth.getBalance(sale.address).toNumber();
     assert.equal(sale_balance, 0, 'Sale still has ether');
+    done();
   })
 
   it('Should verify that the user was refunded', function(done) {
     let user_balance = web3.eth.getBalance(accounts[0]);
-    assert.equal(init_balance.plus(amt), user_balance, 'User was not refunded')
+    assert.equal(init_balance.plus(contribution).minus(gas_used).equals(user_balance), true, 'User was not refunded')
+    done();
   })
-*/
+
 
   //====================================
   // UTILITY FUNCTIONS IN THE TRUFFLE SCOPE
