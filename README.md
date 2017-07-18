@@ -27,7 +27,11 @@ The following is a walkthrough of the Grid+ token sale process.
 
 The Grid+ token sale will run in a discontinuous Reverse Dutch Auction. A fixed number of GRID tokens will be created and some subset of those will be transferred to the `Sale.sol` contract. The token sale is then parameterized, which can only happen once. At this point, pre-sale participants may start sending ether to the contract. Note that pre-salers are under contractual obligation to provide a pre-determined amount of ether and may be kicked out of the sale and blacklisted before their ether is returned. Once the starting block is reached, pre-sale participants may no longer participate and the crowd may send ether until the ending block is reached. Once the cap is reached, the final reward (a function of the blocks elapsed since the starting block) is calculated and applied to all participants. Anyone may withdraw all participants' GRID tokens (determined both by the final reward and the amount of ether contributed) once the sale is over. Note that pre-sale participants receive up to a 15% higher reward value (which still has a ceiling at Rmax).
 
-### 1. Parameterization
+### Token sale walkthrough
+
+The following is the series of steps that will occur during the token sale.
+
+#### 1. Parameterization
 
 The admin may parameterize the sale to fit the following curve:
 
@@ -51,7 +55,7 @@ uint _a_2     The a_2 parameter in the function above
 
 This function may only be called once by the admin and will `throw` otherwise.
 
-### 2. Pre-sale
+#### 2. Pre-sale
 
 Pre-sale participants may be whitelisted at any time by the `admin` using `WhitelistPresale()`. This only takes one parameter:
 
@@ -67,7 +71,7 @@ address user    The address to blacklist from the pre-sale. Any ether contribute
 
 Whitelisted pre-sale participants may contribute to the pre-sale at any time before the starting block (`start`) has been reached. This is done by sending ether to the contract address (covered in the default function `function()`). Once `start` has elapsed, the pre-sale is over and `presale` addresses may no longer contribute.
 
-### 3. Adding the cap
+#### 3. Adding the cap
 
 The cap may be added any time before the starting block. It may only be set once and must be set by the admin. `SetCap()` takes 1 parameter:
 
@@ -77,7 +81,7 @@ uint _cap    The sale cap in wei
 
 This is a pre-requisite to the sale beginning.
 
-### 3. Regular sale
+#### 3. Regular sale
 
 Once `start` has been reached, the sale officially begins. Any Ethereum address may send ether to the sale via the default `function()`. This ether will be accepted *unless one of the following conditions is met*:
 
@@ -85,7 +89,7 @@ Once `start` has been reached, the sale officially begins. Any Ethereum address 
 1. block.number > end block
 2. The msg.value, when added to the contract balance, exceeds the cap
 3. Address is in the pre-sale
-4. The spot price has not been set
+4. The cap has not been set
 ```
 
 If none of these conditions are met, the contributor will trigger the following actions:
@@ -97,4 +101,42 @@ If none of these conditions are met, the contributor will trigger the following 
 4. Emit an event capturing the contribution
 ```
 
-###
+#### 4. Withdrawing GRID tokens for participants
+
+Participants may withdraw tokens themselves or Grid+ may trigger the withdrawal. The `Withdraw()` function may be called by any Ethereum address and takes one parameter:
+
+```
+address user    User to whom the GRID tokens should be withdrawn
+```
+
+This function may be called at any time after the sale. The amount contributed by the user in question is copied to memory and the mapping is zeroed out. With this contribution amount (in wei), the user reward (in GRID) is calculated using the `GetUserReward()` function. These GRID tokens are then transferred to the user and an event is emitted.
+
+Note that `GetUserReward()` includes a 1.15x multiplier for pre-sale participants. If the result of this value (`1.15*Rf`) is greater than `Rmax`, it is simply replaced by the value of `Rmax`.
+
+#### 5. Withdrawing excess GRID tokens
+
+Depending on the value of `Rf`, the sale contract may retain some number of GRID tokens, which can be withdrawn once all participants have had their GRID tokens withdrawn. This is triggered with `MoveGRID()`, which may only be called by the `admin`. This may of course only be called once the block number is greater than the end block of the sale. It takes 1 parameter:
+
+```
+address to    The address to whom the excess GRID will be transferred
+```
+
+#### 6. Withdrawing ether
+
+Ether may be withdrawn from the contract at any time by the admin using `MoveFunds()`. Similar to `MoveGRID()`, the function takes an address to move the ether to.
+
+At this point the sale is concluded!
+
+### Escape Hatch
+
+In the event that something goes tragically wrong with the Grid+ token sale, an escape hatch has been provided. Once it is open, the sale immediately stops and all participants may withdraw any ether they contributed.
+
+Only the `admin` may open the hatch (which cannot be closed once open) and does so by calling `Escape()`, which takes no parameters.
+
+Once the hatch is open, any Ethereum address may call `Abort()`, which takes one parameter:
+
+```
+address user    Participant to be refunded
+```
+
+The amount contributed by the user in question is copied to memory and the mapping is zeroed out. This amount is then refunded to the user.

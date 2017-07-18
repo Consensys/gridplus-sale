@@ -215,11 +215,7 @@ contract Sale {
   // Ether may only be moved once all GRID have been withdrawn.
   // This includes the amount of GRID moved by Grid+.
   function MoveFunds(address to) onlyAdmin() {
-    if (block.number > end && start > 0) {
-      to.transfer(address(this).balance);
-    } else {
-      throw;
-    }
+    to.transfer(address(this).balance);
   }
 
   function SwitchAdmin(address new_admin) onlyAdmin() {

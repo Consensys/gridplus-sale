@@ -194,12 +194,6 @@ contract('TokenSale', function(accounts) {
     .catch((err) => { done(); })
   })
 
-  it('Should fail to withdraw ether while the sale is ongoing', function(done) {
-    sale.MoveFunds(accounts[0], { from: accounts[1]})
-    .then(() => { assert.equal(1, 0, "Should have failed"); })
-    .catch((err) => { done(); })
-  })
-
 
   it('Should contribute 0.1 eth from 5 accounts', function(done) {
     contribute(sale, accounts.slice(0, N_ACCT_1-N_FAIL_1))
