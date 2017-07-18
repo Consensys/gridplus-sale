@@ -563,25 +563,19 @@ contract('TokenSale', function(accounts) {
     .then((nonce) => {
       to_redeem = 1000000;
       let msg = util.redemption_msg(to_redeem, grid_contract.address, nonce.toNumber());
-      console.log('msg', msg)
-      let addr = grid_contract.address.substr(2, 40);
-      console.log('addr', addr, 'full', grid_contract.address)
-      msg = sha3(`${sha3(to_redeem)}${grid_contract.address.substr(2, 40)}`)
+
       let sig = web3.eth.sign(accounts[0], msg);
       let r = "0x"+sig.substr(2, 64)
       let s = "0x"+sig.substr(66, 64)
       let _v = 27 + Number(sig.substr(130, 2));
       let v = "0x"+util.zfill(_v.toString(16));
-      console.log('r', r, 's', s, 'v', v)
-      console.log('accounts[0]', accounts[0])
       return grid_contract.provable_redemption([r, s, v], to_redeem)
     })
     .then(() => {
       return grid_contract.balanceOf(accounts[0])
     })
     .then((new_bal) => {
-      console.log('new_bal', new_bal, 'pre_redeem_balance', pre_redeem_balance, 'to_redeem', to_redeem)
-      assert.equal(new_bal.plus(to_redeem), pre_redeem_balance, 'GRID not properly redeemed')
+      assert.equal(new_bal.plus(to_redeem).equals(pre_redeem_balance), true, 'GRID not properly redeemed')
       done()
     })
   })

@@ -69,10 +69,10 @@ contract GRID is ERC20 {
   // sig[3]    v of signature
   function provable_redemption(bytes32[3] sig, uint256 value) returns (bool) {
    // ABI definition of this function
-    //bytes32 word = 0x5ac232f4;
-    //uint nonce = nonces[signer];
+    bytes32 word = 0x5ac232f4;
+    uint nonce = nonces[signer];
     //bytes32 _msg = sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
-    bytes32 _msg = sha3(sha3(uint(value)), address(this));
+    bytes32 _msg = sha3(sha3(uint(value)), address(this), word, uint(nonce));
     bytes memory prefix = "\x19Ethereum Signed Message:\n32";
     bytes32 msg = sha3(prefix, _msg);
     address signer = ecrecover(msg, uint8(sig[2]), sig[0], sig[1]);
@@ -85,8 +85,8 @@ contract GRID is ERC20 {
     nonces[signer] += 1;
 
     // Redeem
-    //balances[signer] = safeSub(balances[signer], 1);
-    //supply = safeSub(supply, value);
+    balances[signer] = safeSub(balances[signer], value);
+    supply = safeSub(supply, value);
     Transfer(signer, 0, value);
 
     return true;
