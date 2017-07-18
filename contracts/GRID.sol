@@ -72,15 +72,17 @@ contract GRID is ERC20 {
     //bytes32 word = 0x5ac232f4;
     //uint nonce = nonces[signer];
     //bytes32 _msg = sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
-    address signer = ecrecover(sha3(1), uint8(sig[2]), sig[0], sig[1]);
-
+    bytes32 _msg = sha3(sha3(uint(value)), address(this));
+    bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+    bytes32 msg = sha3(prefix, _msg);
+    address signer = ecrecover(msg, uint8(sig[2]), sig[0], sig[1]);
 
     // Replay protection
     //if (played[signer][msg] == true) { return false; }
 
     // Update state variables
-    //played[signer][_msg] = true;
-    //nonces[signer] += 1;
+    played[signer][_msg] = true;
+    nonces[signer] += 1;
 
     // Redeem
     //balances[signer] = safeSub(balances[signer], 1);

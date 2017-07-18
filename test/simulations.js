@@ -561,15 +561,20 @@ contract('TokenSale', function(accounts) {
   it('Should redeem 10% of GRID tokens from accounts[0]', function(done) {
     grid_contract.get_nonce(accounts[0])
     .then((nonce) => {
-      to_redeem = 1000001;
-      //let msg = util.redemption_msg(1, grid_contract.address, nonce.toNumber());
-      let sig = web3.eth.sign(accounts[0], sha3(1));
+      to_redeem = 1000000;
+      let msg = util.redemption_msg(to_redeem, grid_contract.address, nonce.toNumber());
+      console.log('msg', msg)
+      let addr = grid_contract.address.substr(2, 40);
+      console.log('addr', addr, 'full', grid_contract.address)
+      msg = sha3(`${sha3(to_redeem)}${grid_contract.address.substr(2, 40)}`)
+      let sig = web3.eth.sign(accounts[0], msg);
       let r = "0x"+sig.substr(2, 64)
       let s = "0x"+sig.substr(66, 64)
       let _v = 27 + Number(sig.substr(130, 2));
       let v = "0x"+util.zfill(_v.toString(16));
+      console.log('r', r, 's', s, 'v', v)
       console.log('accounts[0]', accounts[0])
-      return grid_contract.provable_redemption([r, s, v], 10000)
+      return grid_contract.provable_redemption([r, s, v], to_redeem)
     })
     .then(() => {
       return grid_contract.balanceOf(accounts[0])
