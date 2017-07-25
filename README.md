@@ -11,7 +11,6 @@ To get set up, run the following:
 
 ```
 npm install
-bash testrpc.sh
 ```
 
 And in a new terminal window, run:
