@@ -11,7 +11,6 @@ To get set up, run the following:
 
 ```
 npm install
-bash testrpc.sh
 ```
 
 And in a new terminal window, run:
@@ -93,7 +92,7 @@ This function must be called by the `admin` before the starting block.
 
 #### 3. Regular sale
 
-Once `start` has been reached, the sale officially begins. Any Ethereum address may send ether to the sale via the default `function()`. This ether will be accepted *unless one of the following conditions is met*:
+Once `start` has been reached, the sale officially begins. Any Ethereum address (excluding pre-sale participants) may send ether to the sale via the default `function()`. This ether will be accepted *unless one of the following conditions is met*:
 
 ```
 1. block.number > end block
@@ -113,7 +112,7 @@ If none of these conditions are met, the contributor will trigger the following 
 
 #### 4. Withdrawing GRID tokens for participants
 
-Participants may withdraw tokens themselves or Grid+ may trigger the withdrawal. The `Withdraw()` function may be called by any Ethereum address and takes one parameter:
+Once the sale is over (either because the cap has been met *or* because the end block has been reached), participants may withdraw tokens themselves or Grid+ may trigger the withdrawal. The `Withdraw()` function may be called by any Ethereum address and takes one parameter:
 
 ```
 address user    User to whom the GRID tokens should be withdrawn
@@ -121,11 +120,11 @@ address user    User to whom the GRID tokens should be withdrawn
 
 This function may be called at any time after the sale. The amount contributed by the user in question is copied to memory and the mapping is zeroed out. With this contribution amount (in wei), the user reward (in GRID) is calculated using the `GetUserReward()` function. These GRID tokens are then transferred to the user and an event is emitted.
 
-Note that `GetUserReward()` includes a 1.15x multiplier for pre-sale participants. If the result of this value (`1.15*Rf`) is greater than `Rmax`, it is simply replaced by the value of `Rmax`.
+Note that `GetUserReward()` includes a 1.15x multiplier for pre-sale participants, so long as this does not exceed `Rmax`. If the result of this value (`1.15*Rf`) is greater than `Rmax`, it is simply replaced by the value of `Rmax`.
 
 #### 5. Withdrawing excess GRID tokens
 
-Depending on the value of `Rf`, the sale contract may retain some number of GRID tokens, which can be withdrawn once all participants have had their GRID tokens withdrawn. This is triggered with `MoveGRID()`, which may only be called by the `admin`. This may of course only be called once the block number is greater than the end block of the sale. It takes 1 parameter:
+Depending on the value of `Rf`, the sale contract may retain some number of GRID tokens, which can be withdrawn once all participants have had their GRID tokens withdrawn. This is triggered with `MoveGRID()`, which may only be called by the `admin`. This may only be called once the block number is greater than the end block of the sale. It takes 1 parameter:
 
 ```
 address to    The address to whom the excess GRID will be transferred
