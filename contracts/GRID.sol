@@ -73,14 +73,13 @@ contract GRID is ERC20 {
    // ABI definition of this function
     bytes32 word = 0x5ac232f4;
     uint nonce = nonces[signer];
-    //bytes32 _msg = sha3(sha3(uint(value)), bytes4(word), address(this), uint(nonce));
     bytes32 _msg = sha3(sha3(uint(value)), address(this), word, uint(nonce));
     bytes memory prefix = "\x19Ethereum Signed Message:\n32";
     bytes32 msg = sha3(prefix, _msg);
     address signer = ecrecover(msg, uint8(sig[2]), sig[0], sig[1]);
 
     // Replay protection
-    //if (played[signer][msg] == true) { return false; }
+    if (played[signer][msg] == true) { return false; }
 
     // Update state variables
     played[signer][_msg] = true;

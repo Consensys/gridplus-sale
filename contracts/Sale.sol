@@ -1,5 +1,5 @@
 // Token sale contract
-pragma solidity ^0.4.6;
+pragma solidity ^0.4.11;
 import "./ERC20.sol";
 
 contract Sale {

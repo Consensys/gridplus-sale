@@ -288,6 +288,10 @@ contract('TokenSale', function(accounts) {
     })
     .then((supply) => {
       assert.equal(supply.toNumber(), grid_supply, "Wrong supply")
+      return grid_contract.totalSupply()
+    })
+    .then((supply) => {
+      assert.equal(supply.toNumber(), grid_supply, 'Wrong total supply')
     })
   })
 
@@ -535,6 +539,7 @@ contract('TokenSale', function(accounts) {
 
   let pre_redeem_balance;
   let to_redeem;
+  let grid_balance;
   it('Should get the GRID balance of accounts[0]', function(done) {
     grid_contract.balanceOf(accounts[0])
     .then((bal) => {
@@ -561,11 +566,92 @@ contract('TokenSale', function(accounts) {
     })
     .then((new_bal) => {
       assert.equal(new_bal.plus(to_redeem).equals(pre_redeem_balance), true, 'GRID not properly redeemed')
+      grid_balance = new_bal;
       done()
     })
   })
 
+  it('Should make the supplies updated', function(done) {
+    let init_supply
+    grid_contract.initial_supply()
+    .then((_init_supply) => {
+      init_supply = _init_supply
+      assert.equal(init_supply.toNumber(), grid_supply, 'Initial supply changed')
+      return grid_contract.totalSupply()
+    })
+    .then((new_supply) => {
+      assert.equal(new_supply.plus(to_redeem).toNumber(), init_supply, 'Total supply did not update')
+      done();
+    })
+  })
 
+  // Other ERC20 FUNCTIONS
+  it('Should transfer 1 GRID from accounts[0]', function(done) {
+    grid_contract.transfer(accounts[1], 1)
+    .then(() => {
+      return grid_contract.balanceOf(accounts[0])
+    })
+    .then((new_bal) => {
+      assert.equal(new_bal.plus(1).equals(grid_balance), true, 'GRID not transfered')
+      grid_balance = new_bal;
+      done();
+    })
+  })
+
+  it('Should allow and transferFrom', function(done) {
+    grid_contract.approve(accounts[1], 1)
+    .then(() => {
+      return grid_contract.allowance(accounts[0], accounts[1])
+    })
+    .then((allowance) => {
+      assert.equal(allowance.toNumber(), 1, 'Allowance not set properly')
+      return grid_contract.transferFrom(accounts[0], accounts[1], 1, { from: accounts[1]})
+    })
+    .then(() => {
+      return grid_contract.balanceOf(accounts[0])
+    })
+    .then((new_bal) => {
+      assert.equal(new_bal.plus(1).equals(grid_balance), true, 'transferFrom failed')
+      grid_balance = new_bal;
+      done()
+    })
+  })
+
+  it('Should make sure default function throws', function(done) {
+    var sendObj = { from: accounts[0], to: grid_contract.address, value: 0 }
+    catchThrow(sendObj)
+    .then(() => { done(); })
+    .catch((err) => { assert.notEqual(err, null); done(); })
+  })
+
+  function catchThrow(sendObj) {
+    return new Promise((resolve, reject) => {
+      Promise.resolve(web3.eth.sendTransaction(sendObj))
+      .then(() => { reject('Did not throw'); })
+      .catch((err) => { console.log('i made it here...'); resolve(true); })
+
+    })
+  }
+
+  /*it('Should verify metadata', function(done) {
+    grid_contract.name()
+    .then((name) => {
+      console.log('name', name)
+      return grid_contract.decimals()
+    })
+    .then((decimals) => {
+      console.log('decimals', decimals)
+      return grid_contract.symbol()
+    })
+    .then((symbol) => {
+      console.log('symbol', symbol)
+      return grid_contract.version()
+    })
+    .then((version) => {
+      console.log('version', version)
+      done();
+    })
+  })*/
 
   //====================================
   // SIMULATION 3
