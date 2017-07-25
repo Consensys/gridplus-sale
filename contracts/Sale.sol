@@ -180,12 +180,11 @@ contract Sale {
   }
 
   // Parameterize the sale
-  function SetupSale(uint _Rmax, uint _start, uint length, uint _a_1, uint _a_2) onlyAdmin() {
+  function SetupSale(uint _start, uint length, uint _a_1, uint _a_2) onlyAdmin() {
     // Can only do this once
     if (start == 0) {
       a_1 = _a_1;
       a_2 = _a_2;
-      Rmax = _Rmax;  // This needs to be a multiple of 5
       start = _start;
       end = length + _start;
       wei_remaining = 0;
@@ -195,9 +194,10 @@ contract Sale {
   }
 
   // Set the cap (in wei)
-  function SetCap(uint _cap) onlyAdmin() {
+  function SetCap(uint _cap, uint _Rmax) onlyAdmin() {
     if (cap > 0) { throw; }
     cap = _cap;
+    Rmax = _Rmax;  // This needs to be a multiple of 5
   }
 
   // GRID may only be moved once the sale is over amd all GRID have been

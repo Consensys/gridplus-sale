@@ -25,13 +25,17 @@ The following is a walkthrough of the Grid+ token sale process.
 
 ### Summary
 
-The Grid+ token sale will run in a discontinuous Reverse Dutch Auction. A fixed number of GRID tokens will be created and some subset of those will be transferred to the `Sale.sol` contract. The token sale is then parameterized, which can only happen once. At this point, pre-sale participants may start sending ether to the contract. Note that pre-salers are under contractual obligation to provide a pre-determined amount of ether and may be kicked out of the sale and blacklisted before their ether is returned. Once the starting block is reached, pre-sale participants may no longer participate and the crowd may send ether until the ending block is reached. Once the cap is reached, the final reward (a function of the blocks elapsed since the starting block) is calculated and applied to all participants. Note that this reward (in units of GRID/ETH) has a ceiling at Rmax, which is a function of the ether cap set before the sale. The number of GRID tokens rewarded to each participant is determined both by the final reward and the amount of ether contributed and those GRID tokens may be sent to the participant by any Ethereum user once the sale is over. Note that pre-sale participants receive up to a 15% higher reward value (which still has a ceiling at Rmax).
+The Grid+ token sale will run in a discontinuous Reverse Dutch Auction. A fixed number of GRID tokens will be created and some subset of those will be transferred to the `Sale.sol` contract. The token sale is then parameterized by calling two separate functions, of which each may only be called once. After the first function is called (which parameterizes the dynamic reward function), pre-sale participants may start sending ether to the contract. Note that pre-salers are under contractual obligation to provide a pre-determined amount of ether and may be kicked out of the sale and blacklisted before their ether is returned. Once the second parameterization function is called (which sets the ether cap and `Rmax`) and the starting block is reached, the crowd may send ether until the ending block is reached. Note that pre-sale participants may send ether at any time before the starting block is reached. Once the cap is reached, the final reward (a function of the blocks elapsed since the starting block) is calculated and applied to all participants. Note that this reward (in units of GRID/ETH) has a ceiling at `Rmax`. The number of GRID tokens rewarded to each participant is determined both by the final reward and the amount of ether contributed and those GRID tokens may be sent to the participant by any Ethereum user once the sale is over. Note that pre-sale participants receive up to a 15% higher reward value (which still has a ceiling at Rmax).
 
 ### Token sale walkthrough
 
 The following is the series of steps that will occur during the token sale.
 
-#### 1. Parameterization
+#### 0. Deploying sale.sol
+
+`Sale.sol` bytecode is deployed to Ethereum. The deploying address is set as the `admin`. The `admin` may be changed at any time by the current `admin` by calling `SwitchAdmin()` with a new address as the parameter.
+
+#### 1. Parameterization of the reward function
 
 The admin may parameterize the sale to fit the following curve:
 
@@ -46,14 +50,13 @@ It is important to note that `R` cannot exceed `Rmax`.
 `SetupSale()` may be called by the admin (by default, the address that deployed the contract). It takes the following parameters:
 
 ```
-uint _Rmax    The maximum value of R (in GRID/ETH)
 uint _start   The block number on which the sale begins
 uint length   The number of blocks for which the sale will run. _start + length = end block
 uint _a_1     The a_1 parameter in the function above
 uint _a_2     The a_2 parameter in the function above
 ```
 
-This function may only be called once by the admin and will `throw` otherwise.
+This function may only be called once by the admin and will `throw` otherwise. Note that `Rmax` is set when the cap is determined. This may happen shortly after the initial parameterization.
 
 #### 2. Pre-sale
 
@@ -73,13 +76,14 @@ Whitelisted pre-sale participants may contribute to the pre-sale at any time bef
 
 #### 3. Adding the cap
 
-The cap may be added any time before the starting block. It may only be set once and must be set by the admin. `SetCap()` takes 1 parameter:
+The cap may be added any time before the starting block. It may only be set once and must be set by the admin. `SetCap()` takes 2 parameters:
 
 ```
 uint _cap    The sale cap in wei
+uint _Rmax   The maximum reward value in GRID/ETH
 ```
 
-This is a pre-requisite to the sale beginning.
+This function must be called by the `admin` before the starting block.
 
 #### 3. Regular sale
 
@@ -123,7 +127,7 @@ address to    The address to whom the excess GRID will be transferred
 
 #### 6. Withdrawing ether
 
-Ether may be withdrawn from the contract at any time by the admin using `MoveFunds()`. Similar to `MoveGRID()`, the function takes an address to move the ether to.
+Ether may be withdrawn from the contract at any time by the `admin` using `MoveFunds()`. Similar to `MoveGRID()`, the function takes an address to move the ether to.
 
 At this point the sale is concluded!
 

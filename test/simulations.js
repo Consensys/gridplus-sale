@@ -118,7 +118,6 @@ contract('TokenSale', function(accounts) {
 
   it('Should setup the token sale simulation.', function(done) {
     // There are several tx that happen after setting this
-    Rmax = 960;
     start_block = config.web3.eth.blockNumber + 4;
     let L = 15;
     y_int_denom = 5;
@@ -130,30 +129,38 @@ contract('TokenSale', function(accounts) {
 
   it('Should fail to the token sale simulation a second time.', function(done) {
     // There are several tx that happen after setting this
-    let Rmax_tmp = 9610;
     start_block = config.web3.eth.blockNumber + 3;
     let L = 15;
-    y_int_denom = 5;
+    let y_int_denom_tmp = 15;
     m_denom = 50000;
-    sale.SetupSale(Rmax_tmp, start_block, L, y_int_denom, m_denom, { from: accounts[1] })
+    sale.SetupSale(start_block, L, y_int_denom, m_denom, { from: accounts[1] })
     .then(() => { assert.equal(1, 0, "Should have failed"); })
     .catch((err) => { done(); })
   })
 
-  it('Should make sure Rmax has not changed', function(done) {
-    sale.Rmax()
-    .then((rmax) => {
-      assert.equal(rmax, 960, 'Rmax changed')
+  it('Should make sure a_1 has not changed', function(done) {
+    sale.a_1()
+    .then((a_1) => {
+      assert.equal(a_1, y_int_denom, 'a_1 changed')
       done();
     })
     .catch((err) => { assert.equal(null, err, null); })
   })
 
   it('Should set the cap', function(done) {
+    Rmax = 960;
     let cap = 0.5 * Math.pow(10, 18);
-    sale.SetCap(cap, { from : accounts[1] })
+    sale.SetCap(cap, Rmax, { from : accounts[1] })
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
+  })
+
+  it('Should get Rmax', function(done) {
+    sale.Rmax()
+    .then((rmax) => {
+      assert.equal(rmax.toNumber(), Rmax, 'Rmax not set properly')
+      done();
+    })
   })
 
   it('Should get the starting block, ending block, and cap', function(done) {
@@ -317,17 +324,17 @@ contract('TokenSale', function(accounts) {
 
   it('Should setup the token sale simulation.', function() {
     // There are several tx that happen after setting this
-    Rmax = 960;
     start_block = config.web3.eth.blockNumber + 12;
     let L = 50;
     y_int_denom = 5;
     m_denom = 50000;
-    sale.SetupSale(Rmax, start_block, L, y_int_denom, m_denom)
+    sale.SetupSale(start_block, L, y_int_denom, m_denom)
   })
 
   it('Should set the cap', function(done) {
     let cap = 0.5 * Math.pow(10, 18);
-    sale.SetCap(cap)
+    Rmax = 960;
+    sale.SetCap(cap, Rmax)
     .then(() => { done(); })
     .catch((err) => { assert.equal(err, null, err); })
   })
@@ -627,17 +634,17 @@ contract('TokenSale', function(accounts) {
 
   it('Should setup the token sale simulation.', function() {
     // There are several tx that happen after setting this
-    Rmax = 960;
     start_block = config.web3.eth.blockNumber + 3;
     let L = 15;
     y_int_denom = 5;
     m_denom = 50000;
-    sale.SetupSale(Rmax, start_block, L, y_int_denom, m_denom)
+    sale.SetupSale(start_block, L, y_int_denom, m_denom)
   })
 
   it('Should set the cap', function() {
+    Rmax = 960;
     let cap = 0.5 * Math.pow(10, 18);
-    sale.SetCap(cap)
+    sale.SetCap(cap, Rmax)
   })
 
   it('Should fail to set the cap a second time', function() {
