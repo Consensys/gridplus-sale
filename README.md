@@ -93,7 +93,7 @@ This function must be called by the `admin` before the starting block.
 
 #### 3. Regular sale
 
-Once `start` has been reached, the sale officially begins. Any Ethereum address may send ether to the sale via the default `function()`. This ether will be accepted *unless one of the following conditions is met*:
+Once `start` has been reached, the sale officially begins. Any Ethereum address (excluding pre-sale participants) may send ether to the sale via the default `function()`. This ether will be accepted *unless one of the following conditions is met*:
 
 ```
 1. block.number > end block
