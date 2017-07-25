@@ -27,6 +27,12 @@ The following is a walkthrough of the Grid+ token sale process.
 
 The Grid+ token sale will run in a discontinuous Reverse Dutch Auction. A fixed number of GRID tokens will be created and some subset of those will be transferred to the `Sale.sol` contract. The token sale is then parameterized by calling two separate functions, of which each may only be called once. After the first function is called (which parameterizes the dynamic reward function), pre-sale participants may start sending ether to the contract. Note that pre-salers are under contractual obligation to provide a pre-determined amount of ether and may be kicked out of the sale and blacklisted before their ether is returned. Once the second parameterization function is called (which sets the ether cap and `Rmax`) and the starting block is reached, the crowd may send ether until the ending block is reached. Note that pre-sale participants may send ether at any time before the starting block is reached. Once the cap is reached, the final reward (a function of the blocks elapsed since the starting block) is calculated and applied to all participants. Note that this reward (in units of GRID/ETH) has a ceiling at `Rmax`. The number of GRID tokens rewarded to each participant is determined both by the final reward and the amount of ether contributed and those GRID tokens may be sent to the participant by any Ethereum user once the sale is over. Note that pre-sale participants receive up to a 15% higher reward value (which still has a ceiling at Rmax).
 
+### The discontinuous reward function
+
+The Grid+ token sale will occur in a discontinuous Reverse Dutch Auction. This means that for the first part of the sale, the reward (GRID/ETH) is a function of the blocks elapsed since the beginning of the sale. At some point, the reward reaches `Rmax`, a pre-defined parameter. For the remainder of the sale, the reward is fixed at `Rmax`. An example curve is shown below, where `Rmax` is roughly ~480 GRID/ETH.
+
+![Example Curve](img/example.png)
+
 ### Token sale walkthrough
 
 The following is the series of steps that will occur during the token sale.
