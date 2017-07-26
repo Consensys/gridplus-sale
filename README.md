@@ -1,5 +1,7 @@
 # GridPlus Token Sale
 
+**NOTE: This repo and the sale contained within are currently under security review and are subject to change. This note will be lifted when the sale contract (Sale.sol) is finalized.**
+
 This repo contains the contracts that will be deployed (`Sale.sol` and `GRID.sol`). The latter is a modified ERC20 token, which includes a function called `provable_redemption` that conforms to the [EIP661](https://github.com/ethereum/EIPs/issues/661) specification, which is a specific instance of the more abstract [EIP662](https://github.com/ethereum/EIPs/issues/662).
 
 Three token sale simulations are included, which are run using `sol-coverage`. `Sale.sol` reaches 100% coverage and every line of `provable_redemption` is covered. The rest of `GRID.sol` is the normal ERC20 specification.
